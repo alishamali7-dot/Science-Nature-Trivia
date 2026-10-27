@@ -20,7 +20,7 @@ Before committing, also confirm it bundles: `npx expo export --platform android 
 |---|---|
 | `App.js` | All screens (start → setup → board → question → end) and game state, including Undo history |
 | `questions.js` | `CATEGORIES` and `QUESTIONS.kids` / `QUESTIONS.adults`. Each question: category, points, question, correct, wrong[3], every text as `{ ar, en }` |
-| `trivia.js` | Live questions from The Trivia API for **English** games (Arabic games use the built-in `questions.js`). `TAGS` maps each category to API topic tags; `DIFFICULTY` maps points to difficulty (kids: easy/medium/medium, adults: easy/medium/hard). One request per category (the API allows 20 per 5 s); short pools borrow the nearest difficulty, then fall back to the built-in question. Offline = built-in deck |
+| `trivia.js` | Live questions from The Trivia API. **The app is English only for now** (`lang` is fixed to `'en'` in `App.js` and the language toggle is hidden) because no API serves Arabic questions; Arabic strings and built-in questions are kept for later. `TAGS` maps each category to API topic tags; `DIFFICULTY` maps points to difficulty (kids: easy/medium/medium, adults: easy/medium/hard). One request per category (the API allows 20 per 5 s); short pools borrow the nearest difficulty, then fall back to the built-in question. Offline = built-in deck |
 | `game.js` | Pure rules: answer order, 50/50, scoring (incl. the pit), winner. Covered by `game.check.js` |
 | `strings.js` | Every UI string in `ar` and `en`, plus `dirFor(lang)` for right-to-left layout |
 | `theme.js` | Colors, fonts, easing curve, time per age group |

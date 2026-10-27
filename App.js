@@ -11,7 +11,6 @@ import Confetti from './components/Confetti';
 import GameBar from './components/GameBar';
 import { haptic } from './components/haptics';
 import Illustration from './components/Illustration';
-import LangToggle from './components/LangToggle';
 import Lifeline from './components/Lifeline';
 import { FadeIn, Float } from './components/Motion';
 import OptionCard from './components/OptionCard';
@@ -49,7 +48,9 @@ function Game() {
   // Bottom safe zone, the same on every screen: the main button always rests here, clear of the
   // home indicator / screen edge with breathing room (a little less on short phones).
   const bottomSafe = Math.max(insets.bottom, space.lg) + (short ? space.lg : space.xl);
-  const [lang, setLang] = useState('ar');
+  // English only for now: no API serves Arabic questions. The Arabic strings and questions stay for later;
+  // to bring Arabic back, make this state again and restore the LangToggle in the top bar.
+  const lang = 'en';
   const [screen, setScreen] = useState('start'); // start | setup | board | question | end
 
   // Setup
@@ -65,7 +66,7 @@ function Game() {
   const [history, setHistory] = useState([]); // game snapshots before each answered question, for Undo
   const [pending, setPending] = useState(null); // snapshot taken when the current question opened
   const [gameConfig, setGameConfig] = useState(null); // { mode, age } of the game in progress, so setup can offer "continue"
-  const [deck, setDeck] = useState(null); // this game's questions (English: from the API; Arabic: built-in)
+  const [deck, setDeck] = useState(null); // this game's questions, from the API (built-in where it falls short)
   const [loading, setLoading] = useState(false);
 
   // Current question
@@ -110,12 +111,9 @@ function Game() {
 
   const newGame = async () => {
     if (loading) return;
-    let fresh = QUESTIONS[age];
-    if (lang === 'en') {
-      setLoading(true);
-      fresh = await loadQuestions(age, QUESTIONS[age], CATEGORIES);
-      setLoading(false);
-    }
+    setLoading(true);
+    const fresh = await loadQuestions(age, QUESTIONS[age], CATEGORIES);
+    setLoading(false);
     setDeck(fresh);
     setResults({});
     setScores(Array(teamCount).fill(0));
@@ -244,8 +242,6 @@ function Game() {
       <View style={[styles.topBar, col(screen === 'board'), { flexDirection: dir.row }]}>
         <View style={[styles.topStart, { flexDirection: dir.row }]}>
           {screen !== 'start' && <BackButton onPress={goBack} label={t.back} dir={dir} />}
-          {/* During a game the bar holds undo/restart; language is changed from setup (then "continue game"). */}
-          {!inGame && <LangToggle lang={lang} onChange={setLang} />}
         </View>
         {inGame ? (
           <GameBar canUndo={history.length > 0} onUndo={undo} onRestart={newGame} t={t} dir={dir} />
