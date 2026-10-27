@@ -23,8 +23,8 @@ import { TIME, colors, fontFiles, fonts } from './theme';
 
 const CALL_BONUS = 30; // seconds added by "call a friend"
 
-// Board layout: two category cards per row.
-const PAIRS = [0, 2, 4].map((i) => CATEGORIES.slice(i, i + 2));
+// Board layout: two category cards per row, for any number of categories.
+const PAIRS = CATEGORIES.filter((_, i) => i % 2 === 0).map((_, r) => CATEGORIES.slice(r * 2, r * 2 + 2));
 
 const HELPER_ICONS = { fifty: 'half', twoTries: 'repeat', pit: 'pit', call: 'phone' };
 

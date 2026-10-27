@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<title>تحدّي العلوم · Science Challenge</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&amp;family=Noto+Naskh+Arabic:wght@700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font:inherit;cursor:pointer;transition:transform .5s cubic-bezier(.32,.72,0,1),background-color .4s cubic-bezier(.32,.72,0,1)}
+button:active{transform:scale(.98)}
+button:disabled{cursor:default}
+input{font:inherit}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes fadeup{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(1.1)}60%{transform:scale(.97)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(10px)}40%{transform:translateX(-10px)}60%{transform:translateX(6px)}80%{transform:translateX(-6px)}}
+@keyframes fall{from{transform:translateY(-30px) rotate(0)}to{transform:translateY(880px) rotate(720deg)}}
+.float{animation:floaty 2.6s cubic-bezier(.45,0,.55,1) infinite}
+.fade{animation:fadeup .7s cubic-bezier(.32,.72,0,1) both}
+.pop{animation:pop .5s cubic-bezier(.32,.72,0,1)}
+.shake{animation:shake .32s cubic-bezier(.36,.07,.19,.97)}
+.confetti{position:absolute;top:0;width:8px;height:13px;border-radius:2px;animation:fall 3.2s cubic-bezier(.55,0,1,.45) both;pointer-events:none}
+@media (prefers-reduced-motion: reduce){.float,.fade,.pop,.shake,.confetti{animation:none}}
+</style>
+</helmet>
+<div dir="{{dir}}" lang="{{lang}}" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; background-color: #07070D; background-image: radial-gradient(70% 45% at 85% 8%, rgba(124,92,255,0.38), transparent 70%), radial-gradient(75% 45% at 5% 92%, rgba(25,194,176,0.22), transparent 70%); color: #F5F3FF; font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; display: flex; flex-direction: column; padding: 48px 16px 24px; gap: 14px; overflow: hidden">
+
+<div style="display: flex; justify-content: space-between; align-items: center; min-height: 46px">
+<div dir="ltr" role="radiogroup" style="display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.09)">
+<button role="radio" aria-checked="{{enOn}}" aria-label="English" onClick="{{setEn}}" style="min-height: 38px; min-width: 52px; padding: 0 12px; border: 0; border-radius: 999px; font-size: 14px; font-weight: 700; background: {{enBg}}; color: {{enFg}}">EN</button>
+<button role="radio" aria-checked="{{arOn}}" onClick="{{setAr}}" style="min-height: 38px; min-width: 52px; padding: 0 12px; border: 0; border-radius: 999px; font-size: 14px; font-weight: 700; background: {{arBg}}; color: {{arFg}}">عربي</button>
+</div>
+<sc-if value="{{inGame}}" hint-placeholder-val="{{false}}">
+<sc-if value="{{confirming}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; align-items: center; gap: 4px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.09)">
+<span style="font-size: 14px; font-weight: 700; padding: 0 10px">{{t.sure}}</span>
+<button onClick="{{confirmRestart}}" aria-label="{{t.restart}}: {{t.yes}}" style="width: 38px; height: 38px; border: 0; border-radius: 19px; background: #3DDC97; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#07070D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+<button onClick="{{cancelRestart}}" aria-label="{{t.no}}" style="width: 38px; height: 38px; border: 0; border-radius: 19px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5F3FF" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</div>
+</sc-if>
+<sc-if value="{{notConfirming}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; align-items: center; gap: 4px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.09)">
+<button onClick="{{undo}}" aria-label="{{t.undo}}" aria-disabled="{{undoOff}}" style="min-height: 38px; display: flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: #F5F3FF; font-size: 14px; font-weight: 700; opacity: {{undoOpacity}}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5F3FF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: {{flip}}"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>{{t.undo}}</button>
+<span style="width: 1px; height: 18px; background: rgba(255,255,255,0.09)"></span>
+<button onClick="{{askRestart}}" aria-label="{{t.restart}}" style="min-height: 38px; display: flex; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: #F5F3FF; font-size: 14px; font-weight: 700">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5F3FF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4v5h5"/></svg>{{t.restartShort}}</button>
+</div>
+</sc-if>
+</sc-if>
+<sc-if value="{{notInGame}}" hint-placeholder-val="{{true}}">
+<span style="display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.09); font-size: 13px; color: #CFCBE6"><span style="width: 6px; height: 6px; border-radius: 3px; background: #A99BFF"></span>{{t.category}}</span>
+</sc-if>
+</div>
+
+<sc-if value="{{isStart}}" hint-placeholder-val="{{true}}">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px">
+<div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px">
+<div style="display: flex; justify-content: center"><img class="float" src="/_blob/74713a06e818901bf81432555d6fbc58" alt="" style="width: 220px; height: 220px"></div>
+<h1 class="fade" style="margin: 0; text-align: center; font-family: 'Noto Naskh Arabic', serif; font-size: 48px; line-height: 1.45; font-weight: 700; animation-delay: .12s">{{t.title}}</h1>
+<p class="fade" style="margin: 0; text-align: center; font-size: 17px; line-height: 1.65; color: #CFCBE6; animation-delay: .24s">{{t.tagline}}</p>
+<div style="display: flex; justify-content: center; gap: 8px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="6">
+<span class="fade" style="display: flex; padding: 4px; border-radius: 999px; border: 1px solid {{c.ring}}; background: {{c.halo}}; animation-delay: {{c.delay}}"><img src="{{c.img}}" alt="" style="width: 36px; height: 36px"></span>
+</sc-for>
+</div>
+</div>
+<button onClick="{{toSetup}}" class="fade" style="height: 60px; border: 0; border-radius: 999px; background: #F5F3FF; color: #07070D; display: flex; align-items: center; justify-content: space-between; padding-inline: 26px 8px; font-size: 18px; font-weight: 700; animation-delay: .78s">{{t.start}}<span style="width: 44px; height: 44px; border-radius: 22px; background: rgba(7,7,13,0.08); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#07070D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: {{flip}}"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span></button>
+</div>
+</sc-if>
+
+<sc-if value="{{isSetup}}" hint-placeholder-val="{{false}}">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px">
+<h1 class="fade" style="margin: 0; font-family: 'Noto Naskh Arabic', serif; font-size: 32px; line-height: 1.5; font-weight: 700">{{t.setup}}</h1>
+<div class="fade" style="display: flex; flex-direction: column; gap: 10px; animation-delay: .08s">
+<span style="font-size: 14px; font-weight: 700; color: #8F8AAE">{{t.who}}</span>
+<div role="radiogroup" style="display: flex; gap: 8px">
+<sc-for list="{{modeCards}}" as="o" hint-placeholder-count="2">
+<button role="radio" aria-checked="{{o.on}}" onClick="{{o.pick}}" style="flex: 1; padding: 5px; border-radius: 24px; border: 1px solid {{o.ring}}; background: {{o.shell}}; color: #F5F3FF">
+<span style="min-height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-radius: 19px; background: #12121C; border-top: 1px solid rgba(255,255,255,0.14); text-align: start">
+<span style="flex: 1; font-size: 17px; font-weight: 700">{{o.title}}</span>
+<span style="width: 22px; height: 22px; border-radius: 11px; border: 1px solid {{o.checkRing}}; background: {{o.checkBg}}; display: flex; align-items: center; justify-content: center; color: #07070D; font-size: 13px; font-weight: 700">{{o.mark}}</span>
+</span>
+</button>
+</sc-for>
+</div>
+</div>
+<div class="fade" style="display: flex; flex-direction: column; gap: 10px; animation-delay: .16s">
+<span style="font-size: 14px; font-weight: 700; color: #8F8AAE">{{t.age}}</span>
+<div role="radiogroup" style="display: flex; gap: 8px">
+<sc-for list="{{ageCards}}" as="o" hint-placeholder-count="2">
+<button role="radio" aria-checked="{{o.on}}" onClick="{{o.pick}}" style="flex: 1; padding: 5px; border-radius: 24px; border: 1px solid {{o.ring}}; background: {{o.shell}}; color: #F5F3FF">
+<span style="display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 19px; background: #12121C; border-top: 1px solid rgba(255,255,255,0.14); text-align: start">
+<span style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px"><img src="{{o.img}}" alt="" style="width: 40px; height: 40px"><span style="width: 22px; height: 22px; border-radius: 11px; border: 1px solid {{o.checkRing}}; background: {{o.checkBg}}; display: flex; align-items: center; justify-content: center; color: #07070D; font-size: 13px; font-weight: 700">{{o.mark}}</span></span>
+<span style="font-size: 17px; font-weight: 700">{{o.title}}</span>
+<span style="font-size: 13px; line-height: 1.5; color: #8F8AAE">{{o.hint}}</span>
+</span>
+</button>
+</sc-for>
+</div>
+</div>
+<sc-if value="{{isTeams}}" hint-placeholder-val="{{true}}">
+<div class="fade" style="display: flex; flex-direction: column; gap: 10px; animation-delay: .24s">
+<span style="font-size: 14px; font-weight: 700; color: #8F8AAE">{{t.teamNames}}</span>
+<label style="display: flex; align-items: center; gap: 10px; border-radius: 999px; padding: 0 18px; background: #12121C; border: 1px solid rgba(255,255,255,0.09); border-top-color: rgba(255,255,255,0.14)">
+<span style="width: 10px; height: 10px; border-radius: 5px; background: #5EB8FF"></span>
+<input value="{{name0}}" onChange="{{editName0}}" placeholder="{{t.team0}}" maxlength="14" aria-label="{{t.teamNames}} 1" style="flex: 1; min-height: 54px; border: 0; outline: 0; background: transparent; color: #F5F3FF; font-size: 17px; font-weight: 700">
+</label>
+<label style="display: flex; align-items: center; gap: 10px; border-radius: 999px; padding: 0 18px; background: #12121C; border: 1px solid rgba(255,255,255,0.09); border-top-color: rgba(255,255,255,0.14)">
+<span style="width: 10px; height: 10px; border-radius: 5px; background: #FF8FB1"></span>
+<input value="{{name1}}" onChange="{{editName1}}" placeholder="{{t.team1}}" maxlength="14" aria-label="{{t.teamNames}} 2" style="flex: 1; min-height: 54px; border: 0; outline: 0; background: transparent; color: #F5F3FF; font-size: 17px; font-weight: 700">
+</label>
+</div>
+</sc-if>
+<button onClick="{{newGame}}" style="margin-top: auto; height: 60px; border: 0; border-radius: 999px; background: #F5F3FF; color: #07070D; display: flex; align-items: center; justify-content: space-between; padding-inline: 26px 8px; font-size: 18px; font-weight: 700">{{t.go}}<span style="width: 44px; height: 44px; border-radius: 22px; background: rgba(7,7,13,0.08); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#07070D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: {{flip}}"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span></button>
+</div>
+</sc-if>
+
+<sc-if value="{{isBoard}}" hint-placeholder-val="{{false}}">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; gap: 8px">
+<sc-for list="{{teamChips}}" as="tm" hint-placeholder-count="2">
+<div style="flex: 1; padding: 4px; border-radius: 22px; border: 1px solid {{tm.ring}}; background: {{tm.shell}}">
+<div style="min-height: 48px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 18px; background: #12121C; border-top: 1px solid rgba(255,255,255,0.14)">
+<span style="width: 8px; height: 8px; border-radius: 4px; background: {{tm.color}}"></span>
+<span style="flex: 1; display: flex; flex-direction: column; min-width: 0">
+<span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{tm.name}}</span>
+<span style="font-size: 12px; font-weight: 700; color: {{tm.color}}">{{tm.turnTag}}</span>
+</span>
+<span style="font-size: 22px; font-weight: 700">{{tm.score}}</span>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center">
+<h2 style="margin: 0; font-family: 'Noto Naskh Arabic', serif; font-size: 20px; line-height: 1.6; font-weight: 700">{{t.board}}</h2>
+<span style="font-size: 14px; color: #8F8AAE">{{leftLine}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{cards}}" as="cd" hint-placeholder-count="6">
+<div class="fade" style="padding: 4px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.09); background: rgba(255,255,255,0.045); animation-delay: {{cd.delay}}">
+<div style="display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 20px; background: #12121C; border-top: 1px solid rgba(255,255,255,0.14)">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{cd.sideA}}" as="tile" hint-placeholder-count="3">
+<button onClick="{{tile.open}}" aria-label="{{tile.label}}" style="width: 42px; height: 40px; padding: 0; border-radius: 14px; border: 1px solid {{tile.border}}; background: {{tile.bg}}; color: {{tile.fg}}; font-size: 15px; font-weight: 700">{{tile.text}}</button>
+</sc-for>
+</div>
+<div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0">
+<span style="display: flex; padding: 3px; border-radius: 999px; background: {{cd.halo}}"><img src="{{cd.img}}" alt="" style="width: 46px; height: 46px"></span>
+<span style="font-size: 13px; line-height: 1.45; font-weight: 700; text-align: center">{{cd.name}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{cd.sideB}}" as="tile" hint-placeholder-count="3">
+<button onClick="{{tile.open}}" aria-label="{{tile.label}}" style="width: 42px; height: 40px; padding: 0; border-radius: 14px; border: 1px solid {{tile.border}}; background: {{tile.bg}}; color: {{tile.fg}}; font-size: 15px; font-weight: 700">{{tile.text}}</button>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isQuestion}}" hint-placeholder-val="{{false}}">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px">
+<sc-if value="{{answered}}" hint-placeholder-val="{{false}}">
+<p class="fade" style="margin: 0; min-height: 40px; display: flex; align-items: center; justify-content: center; text-align: center; white-space: pre-line; font-size: 18px; line-height: 1.55; font-weight: 700; color: {{feedbackColor}}">{{feedback}}</p>
+</sc-if>
+<sc-if value="{{waiting}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; align-items: center; gap: 10px; min-height: 40px">
+<sc-if value="{{isTeams}}" hint-placeholder-val="{{true}}">
+<span style="max-width: 45%; display: flex; align-items: center; gap: 8px; border: 1px solid {{turnRing}}; border-radius: 999px; padding: 5px 12px; background: {{turnBg}}">
+<span style="width: 10px; height: 10px; border-radius: 5px; background: {{turnColor}}; flex-shrink: 0"></span>
+<span style="font-size: 15px; font-weight: 700; color: {{turnColor}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{turnName}}</span>
+</span>
+</sc-if>
+<div role="timer" aria-label="{{left}} {{t.sec}}" style="flex: 1; display: flex; align-items: center; gap: 10px">
+<div style="flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.07); overflow: hidden; display: flex"><div style="height: 6px; border-radius: 3px; background: {{timerColor}}; width: {{timerPct}}; transition: width 1s linear"></div></div>
+<span style="min-width: 52px; box-sizing: border-box; text-align: center; border-radius: 999px; border: 1px solid {{timerRing}}; padding: 2px 10px; font-size: 15px; font-weight: 700; color: {{timerText}}">{{left}}{{t.sec}}</span>
+</div>
+</div>
+</sc-if>
+<div class="fade" style="padding: 5px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.09); background: rgba(255,255,255,0.045)">
+<div style="padding: 18px; border-radius: 25px; background: #12121C; border-top: 1px solid rgba(255,255,255,0.14); display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 10px">
+<img class="float" src="{{q.img}}" alt="" style="width: 48px; height: 48px">
+<span style="flex: 1; font-size: 16px; font-weight: 700; color: {{q.color}}">{{q.cat}}</span>
+<span style="border-radius: 999px; padding: 3px 12px; background: rgba(255,209,102,0.12); border: 1px solid rgba(255,209,102,0.35); color: #FFD166; font-size: 14px; font-weight: 700">{{q.points}} {{t.pts}}</span>
+</div>
+<h2 style="margin: 0; font-size: 23px; line-height: 1.6; font-weight: 700">{{q.text}}</h2>
+<sc-if value="{{hasNote}}" hint-placeholder-val="{{false}}">
+<p style="margin: 0; font-size: 14px; line-height: 1.5; color: #FFD166">{{note}}</p>
+</sc-if>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{answers}}" as="a" hint-placeholder-count="4">
+<button onClick="{{a.pick}}" aria-label="{{a.letter}} {{a.label}}" class="{{a.anim}}" style="min-height: 58px; display: flex; align-items: center; gap: 12px; border-radius: 22px; padding-inline: 8px 18px; text-align: start; font-size: 18px; font-weight: 700; border: 1px solid {{a.border}}; border-top-color: {{a.borderTop}}; background: {{a.bg}}; color: {{a.fg}}; opacity: {{a.opacity}}">
+<span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 18px; background: {{a.badgeBg}}; display: flex; align-items: center; justify-content: center; font-size: 15px; color: {{a.badgeFg}}">{{a.badge}}</span>
+<span style="flex: 1; text-decoration: {{a.deco}}">{{a.label}}</span>
+</button>
+</sc-for>
+</div>
+<div style="margin-top: auto">
+<sc-if value="{{answered}}" hint-placeholder-val="{{false}}">
+<button onClick="{{next}}" class="fade" style="width: 100%; height: 60px; border: 0; border-radius: 999px; background: #F5F3FF; color: #07070D; display: flex; align-items: center; justify-content: space-between; padding-inline: 26px 8px; font-size: 18px; font-weight: 700">{{nextLabel}}<span style="width: 44px; height: 44px; border-radius: 22px; background: rgba(7,7,13,0.08); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#07070D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: {{flip}}"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span></button>
+</sc-if>
+<sc-if value="{{waiting}}" hint-placeholder-val="{{true}}">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{helpers}}" as="h" hint-placeholder-count="4">
+<button onClick="{{h.use}}" aria-disabled="{{h.off}}" style="grid-column: {{h.span}}; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; border: 1px solid {{h.border}}; background: {{h.bg}}; color: {{h.fg}}; font-size: 14px; font-weight: 700">
+<img src="{{h.icon}}" alt="" style="width: 18px; height: 18px; opacity: {{h.iconOpacity}}"><span style="text-decoration: {{h.deco}}">{{h.label}}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isEnd}}" hint-placeholder-val="{{false}}">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px">
+<div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px">
+<div style="display: flex; justify-content: center"><img class="float" src="/_blob/74713a06e818901bf81432555d6fbc58" alt="" style="width: 170px; height: 170px"></div>
+<div class="fade" style="display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; animation-delay: .1s">
+<span style="display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.09); font-size: 13px; color: #CFCBE6"><span style="width: 6px; height: 6px; border-radius: 3px; background: #A99BFF"></span>{{endLabel}}</span>
+<span style="font-family: 'Noto Naskh Arabic', serif; font-size: 46px; line-height: 1.55; font-weight: 700; color: {{endColor}}">{{endTitle}}</span>
+<sc-if value="{{isSolo}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 14px; color: #8F8AAE">{{outOf}}</span>
+<span style="font-size: 20px; font-weight: 700; margin-top: 6px">{{correctLine}}</span>
+<span style="font-size: 17px; color: #CFCBE6">{{verdict}}</span>
+</sc-if>
+</div>
+<sc-if value="{{isTeams}}" hint-placeholder-val="{{true}}">
+<div class="fade" style="display: flex; gap: 8px; animation-delay: .25s">
+<sc-for list="{{teamChips}}" as="tm" hint-placeholder-count="2">
+<div style="flex: 1; padding: 4px; border-radius: 22px; border: 1px solid rgba(255,255,255,0.09); background: rgba(255,255,255,0.045)">
+<div style="min-height: 48px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 18px; background: #12121C; border-top: 1px solid rgba(255,255,255,0.14)">
+<span style="width: 8px; height: 8px; border-radius: 4px; background: {{tm.color}}"></span>
+<span style="flex: 1; font-size: 15px; font-weight: 700">{{tm.name}}</span>
+<span style="font-size: 22px; font-weight: 700">{{tm.score}}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+<div class="fade" style="display: flex; flex-direction: column; gap: 10px; animation-delay: .4s">
+<button onClick="{{newGame}}" style="height: 60px; border: 0; border-radius: 999px; background: #F5F3FF; color: #07070D; display: flex; align-items: center; justify-content: space-between; padding-inline: 26px 8px; font-size: 18px; font-weight: 700">{{t.again}}<span style="width: 44px; height: 44px; border-radius: 22px; background: rgba(7,7,13,0.08); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#07070D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4v5h5"/></svg></span></button>
+<button onClick="{{toSetup}}" style="height: 60px; border-radius: 999px; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.09); color: #F5F3FF; display: flex; align-items: center; justify-content: space-between; padding-inline: 26px 8px; font-size: 18px; font-weight: 700">{{t.change}}<span style="width: 44px; height: 44px; border-radius: 22px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5F3FF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: {{flip}}"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></span></button>
+</div>
+<sc-for list="{{confetti}}" as="p" hint-placeholder-count="0">
+<span class="confetti" aria-hidden="true" style="left: {{p.x}}; background: {{p.c}}; animation-delay: {{p.d}}"></span>
+</sc-for>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+var IMG = {
+  space: '/_blob/9001e6d7c71d855cd7706a0ef5575859', animals: '/_blob/70d3b85170cdd32ad022ef56ab04adfb', plants: '/_blob/1a260025b3af346458e3420fd19b5865',
+  body: '/_blob/29271703c11faa294cd84e547b40388c', earth: '/_blob/424052911ed5afe80927c57f8a931922', oceans: '/_blob/8ff6bdbc4d24c4734768b07c2b0d96f9'
+};
+var ICONS = { fifty: '/_blob/3bfaf6c3987979c9c62167319d85efb6', twoTries: '/_blob/76a8e4ab6fd3fbf498826f9adf453b6b', pit: '/_blob/21ce3ef9b1c629b33800e118dc8ca3ca', call: '/_blob/aaa1b7ada0203e1d77093fbe555a810d' };
+var CATS = [
+  { id: 'space', color: '#8B7CFF', name: { ar: 'الفضاء', en: 'Space' } },
+  { id: 'animals', color: '#FF9F43', name: { ar: 'الحيوانات', en: 'Animals' } },
+  { id: 'plants', color: '#2ED47A', name: { ar: 'النبات', en: 'Plants' } },
+  { id: 'body', color: '#FF6B8B', name: { ar: 'جسم الإنسان', en: 'Human body' } },
+  { id: 'earth', color: '#3FB6FF', name: { ar: 'الأرض والمواد', en: 'Earth & matter' } },
+  { id: 'oceans', color: '#2DD4BF', name: { ar: 'البحار', en: 'Oceans' } }
+];
+// Same 72 questions as the app's questions.js: [category, points, q.ar, q.en, right.ar, right.en, [[wrong.ar, wrong.en] x3]]
+var RAW = {"kids":[["space",200,"ما الكوكب الذي نعيش عليه؟","Which planet do we live on?","الأرض","Earth",[["المريخ","Mars"],["القمر","The Moon"],["الشمس","The Sun"]]],["space",200,"ما أقرب نجم إلى الأرض؟","What is the closest star to Earth?","الشمس","The Sun",[["القمر","The Moon"],["المريخ","Mars"],["المشتري","Jupiter"]]],["space",400,"ما أكبر كوكب في المجموعة الشمسية؟","What is the biggest planet in our solar system?","المشتري","Jupiter",[["الأرض","Earth"],["المريخ","Mars"],["عطارد","Mercury"]]],["space",400,"أي كوكب يُسمّى الكوكب الأحمر؟","Which planet is called the Red Planet?","المريخ","Mars",[["الزهرة","Venus"],["زحل","Saturn"],["نبتون","Neptune"]]],["space",600,"أي كوكب له حلقات كبيرة جميلة؟","Which planet has big, beautiful rings?","زحل","Saturn",[["المريخ","Mars"],["عطارد","Mercury"],["الزهرة","Venus"]]],["space",600,"من أول إنسان مشى على سطح القمر؟","Who was the first person to walk on the Moon?","نيل آرمسترونغ","Neil Armstrong",[["يوري غاغارين","Yuri Gagarin"],["باز ألدرين","Buzz Aldrin"],["إسحاق نيوتن","Isaac Newton"]]],["animals",200,"أي حيوان يُلقَّب بملك الغابة؟","Which animal is called the king of the jungle?","الأسد","Lion",[["الفيل","Elephant"],["النمر","Tiger"],["الزرافة","Giraffe"]]],["animals",200,"أي حيوان يعطينا الحليب في المزرعة؟","Which farm animal gives us milk?","البقرة","Cow",[["الأسد","Lion"],["الأفعى","Snake"],["النسر","Eagle"]]],["animals",400,"كم رِجلًا للعنكبوت؟","How many legs does a spider have?","8","8",[["6","6"],["10","10"],["4","4"]]],["animals",400,"ما أكبر حيوان في العالم؟","What is the biggest animal in the world?","الحوت الأزرق","Blue whale",[["الفيل","Elephant"],["الزرافة","Giraffe"],["القرش","Shark"]]],["animals",600,"ماذا نسمي صغير الضفدع؟","What do we call a baby frog?","الشرغوف","Tadpole",[["الهريرة","Kitten"],["الشبل","Cub"],["الكتكوت","Chick"]]],["animals",600,"أي طائر لا يستطيع الطيران؟","Which bird cannot fly?","البطريق","Penguin",[["النسر","Eagle"],["الحمامة","Pigeon"],["العصفور","Sparrow"]]],["plants",200,"أي جزء من النبات يكون عادةً تحت التراب؟","Which part of a plant is usually under the ground?","الجذور","Roots",[["الأوراق","Leaves"],["الأزهار","Flowers"],["الثمار","Fruit"]]],["plants",200,"ما لون أغلب أوراق الأشجار؟","What color are most tree leaves?","أخضر","Green",[["أزرق","Blue"],["بنفسجي","Purple"],["أسود","Black"]]],["plants",400,"ما الغاز الذي تعطينا إياه النباتات لنتنفس؟","Which gas do plants give us to breathe?","الأكسجين","Oxygen",[["ثاني أكسيد الكربون","Carbon dioxide"],["الهيليوم","Helium"],["الدخان","Smoke"]]],["plants",400,"ماذا يحتاج النبات لينمو؟","What does a plant need to grow?","الماء وضوء الشمس","Water and sunlight",[["الحليب","Milk"],["العصير","Juice"],["الملح","Salt"]]],["plants",600,"أي جزء من النبات يتحول إلى ثمرة؟","Which part of a plant turns into a fruit?","الزهرة","The flower",[["الجذر","The root"],["الورقة","The leaf"],["الساق","The stem"]]],["plants",600,"أي شجرة تعطينا التمر؟","Which tree gives us dates?","النخلة","Palm tree",[["شجرة التفاح","Apple tree"],["شجرة الزيتون","Olive tree"],["شجرة الصنوبر","Pine tree"]]],["body",200,"كم إصبعًا في اليدين معًا؟","How many fingers are on two hands?","10","10",[["8","8"],["12","12"],["5","5"]]],["body",200,"أي حاسة نستخدمها بالأنف؟","Which sense do we use our nose for?","الشم","Smell",[["البصر","Sight"],["السمع","Hearing"],["التذوق","Taste"]]],["body",400,"ما العضو الذي يضخ الدم في الجسم؟","Which organ pumps blood around the body?","القلب","Heart",[["الرئتان","Lungs"],["المعدة","Stomach"],["الدماغ","Brain"]]],["body",400,"بأي عضو نفكّر؟","Which organ do we think with?","الدماغ","Brain",[["القلب","Heart"],["المعدة","Stomach"],["الرئتان","Lungs"]]],["body",600,"كم سنًّا عند الإنسان البالغ عادةً؟","How many teeth does an adult usually have?","32","32",[["20","20"],["40","40"],["12","12"]]],["body",600,"في أي جزء من الجسم توجد أصغر عظمة؟","Where in the body is the smallest bone?","الأذن","The ear",[["الأنف","The nose"],["القدم","The foot"],["اليد","The hand"]]],["earth",200,"من أي شيء يتكوّن الثلج؟","What is ice made of?","الماء","Water",[["الحليب","Milk"],["الرمل","Sand"],["الملح","Salt"]]],["earth",200,"ما الفصل الأشد حرارة في السنة؟","Which season is the hottest?","الصيف","Summer",[["الشتاء","Winter"],["الربيع","Spring"],["الخريف","Autumn"]]],["earth",400,"ماذا نسمي الجبل الذي يقذف الحمم؟","What do we call a mountain that shoots out lava?","بركان","Volcano",[["تل","Hill"],["جزيرة","Island"],["صحراء","Desert"]]],["earth",400,"ماذا نسمي أرضًا واسعة فيها رمل كثير ومطر قليل؟","What do we call a big sandy place with very little rain?","صحراء","Desert",[["غابة","Forest"],["جزيرة","Island"],["نهر","River"]]],["earth",600,"كم لونًا في قوس قزح؟","How many colors are in a rainbow?","7","7",[["3","3"],["5","5"],["10","10"]]],["earth",600,"ما الذي يجذب الأشياء لتسقط نحو الأرض؟","What pulls things down so they fall to the ground?","الجاذبية","Gravity",[["الرياح","Wind"],["الضوء","Light"],["الصوت","Sound"]]],["oceans",200,"أي حيوان يعيش في البحر؟","Which animal lives in the sea?","السمكة","Fish",[["الجمل","Camel"],["البقرة","Cow"],["الأسد","Lion"]]],["oceans",200,"هل ماء البحر حلو أم مالح؟","Is sea water sweet or salty?","مالح","Salty",[["حلو","Sweet"],["حامض","Sour"],["مُر","Bitter"]]],["oceans",400,"أي حيوان بحري له ثماني أذرع؟","Which sea animal has eight arms?","الأخطبوط","Octopus",[["الدلفين","Dolphin"],["القرش","Shark"],["السلحفاة","Turtle"]]],["oceans",400,"أي حيوان بحري يضع بيضه على الشاطئ؟","Which sea animal lays its eggs on the beach?","السلحفاة البحرية","Sea turtle",[["الدلفين","Dolphin"],["الحوت","Whale"],["الأخطبوط","Octopus"]]],["oceans",600,"ما أكبر محيط في العالم؟","What is the biggest ocean in the world?","المحيط الهادئ","Pacific Ocean",[["المحيط الأطلسي","Atlantic Ocean"],["المحيط الهندي","Indian Ocean"],["المحيط المتجمد الشمالي","Arctic Ocean"]]],["oceans",600,"أي حيوان بحري من الثدييات وليس سمكة؟","Which sea animal is a mammal, not a fish?","الدلفين","Dolphin",[["القرش","Shark"],["التونة","Tuna"],["السلمون","Salmon"]]]],"adults":[["space",200,"ما أقرب كوكب إلى الشمس؟","Which planet is closest to the Sun?","عطارد","Mercury",[["الزهرة","Venus"],["المريخ","Mars"],["الأرض","Earth"]]],["space",200,"ما اسم المجرة التي نعيش فيها؟","What is the name of our galaxy?","درب التبانة","The Milky Way",[["أندروميدا","Andromeda"],["مجرة السومبريرو","Sombrero"],["مجرة الدوامة","Whirlpool"]]],["space",400,"كم يستغرق ضوء الشمس تقريبًا ليصل إلى الأرض؟","About how long does sunlight take to reach Earth?","8 دقائق","8 minutes",[["8 ثوانٍ","8 seconds"],["8 ساعات","8 hours"],["يوم كامل","A whole day"]]],["space",400,"أي كوكب يدور وهو مائل على جنبه تقريبًا؟","Which planet spins almost on its side?","أورانوس","Uranus",[["نبتون","Neptune"],["زحل","Saturn"],["الزهرة","Venus"]]],["space",600,"ما أشد كواكب المجموعة الشمسية حرارة؟","What is the hottest planet in the solar system?","الزهرة","Venus",[["عطارد","Mercury"],["المريخ","Mars"],["المشتري","Jupiter"]]],["space",600,"ما اسم الحدّ حول الثقب الأسود الذي لا يفلت منه شيء؟","What is the boundary around a black hole that nothing escapes?","أفق الحدث","Event horizon",[["حزام كايبر","Kuiper belt"],["سحابة أورت","Oort cloud"],["الغلاف الشمسي","Heliosphere"]]],["animals",200,"ما أسرع حيوان بري؟","What is the fastest land animal?","الفهد الصياد","Cheetah",[["الأسد","Lion"],["الحصان","Horse"],["الغزال","Gazelle"]]],["animals",200,"ما أكبر حيوان بري؟","What is the largest land animal?","الفيل الأفريقي","African elephant",[["الزرافة","Giraffe"],["فرس النهر","Hippo"],["وحيد القرن","Rhino"]]],["animals",400,"أي حيوان ثديي يستطيع الطيران فعلًا؟","Which mammal can truly fly?","الخفاش","Bat",[["السنجاب الطائر","Flying squirrel"],["البطريق","Penguin"],["النعامة","Ostrich"]]],["animals",400,"كم قلبًا للأخطبوط؟","How many hearts does an octopus have?","3","3",[["1","1"],["2","2"],["8","8"]]],["animals",600,"ماذا نسمي الحيوانات التي تأكل النبات واللحم معًا؟","What do we call animals that eat both plants and meat?","القوارت","Omnivores",[["العواشب","Herbivores"],["اللواحم","Carnivores"],["آكلات الحشرات","Insectivores"]]],["animals",600,"أي طائر يستطيع الطيران إلى الخلف؟","Which bird can fly backwards?","الطائر الطنان","Hummingbird",[["النسر","Eagle"],["البومة","Owl"],["الصقر","Falcon"]]],["plants",200,"أي غاز تمتصه النباتات من الهواء لتصنع غذاءها؟","Which gas do plants take in to make food?","ثاني أكسيد الكربون","Carbon dioxide",[["الأكسجين","Oxygen"],["النيتروجين","Nitrogen"],["الهيليوم","Helium"]]],["plants",200,"ما المادة التي تعطي النبات لونه الأخضر؟","What gives plants their green color?","اليخضور (الكلوروفيل)","Chlorophyll",[["الكاروتين","Carotene"],["الميلانين","Melanin"],["الهيموغلوبين","Hemoglobin"]]],["plants",400,"ما اسم العملية التي تصنع بها النباتات غذاءها من ضوء الشمس؟","What is the process plants use to make food from sunlight?","البناء الضوئي","Photosynthesis",[["التنفس","Respiration"],["الهضم","Digestion"],["التبخر","Evaporation"]]],["plants",400,"أي نسيج ينقل الماء من الجذور إلى الأوراق؟","Which tissue carries water from the roots to the leaves?","الخشب","Xylem",[["اللحاء","Phloem"],["الثغور","Stomata"],["حبوب اللقاح","Pollen"]]],["plants",600,"ما أطول نوع من الأشجار في العالم؟","What is the tallest kind of tree in the world?","السيكويا الساحلية","Coast redwood",[["الباوباب","Baobab"],["البلوط","Oak"],["النخيل","Palm"]]],["plants",600,"ما اسم الفتحات الصغيرة في الورقة التي يمر منها الهواء؟","What are the tiny openings on leaves that let air in and out?","الثغور","Stomata",[["الخشب","Xylem"],["الشعيرات الجذرية","Root hairs"],["البتلات","Petals"]]],["body",200,"كم عظمة في جسم الإنسان البالغ؟","How many bones does an adult human have?","206","206",[["186","186"],["212","212"],["230","230"]]],["body",200,"أي خلايا الدم تحارب الالتهابات؟","Which blood cells fight infections?","خلايا الدم البيضاء","White blood cells",[["خلايا الدم الحمراء","Red blood cells"],["الصفائح الدموية","Platelets"],["البلازما","Plasma"]]],["body",400,"ما أكبر عضو في جسم الإنسان؟","What is the largest organ of the human body?","الجلد","Skin",[["الكبد","Liver"],["الدماغ","Brain"],["الرئتان","Lungs"]]],["body",400,"أي عضو يفرز الإنسولين؟","Which organ makes insulin?","البنكرياس","Pancreas",[["الكبد","Liver"],["الكلية","Kidney"],["المعدة","Stomach"]]],["body",600,"ما أصغر عظمة في جسم الإنسان؟","What is the smallest bone in the human body?","الركاب","Stapes",[["عظم الفخذ","Femur"],["الضلع","Rib"],["الرضفة","Kneecap"]]],["body",600,"أي فصيلة دم تُسمّى المتبرع العام؟","Which blood type is called the universal donor?","O سالب","O negative",[["AB موجب","AB positive"],["A موجب","A positive"],["B سالب","B negative"]]],["earth",200,"ما أصلب مادة طبيعية؟","What is the hardest natural material?","الألماس","Diamond",[["الكوارتز","Quartz"],["الحديد","Iron"],["الجرانيت","Granite"]]],["earth",200,"ما الصيغة الكيميائية للماء؟","What is the chemical formula for water?","H₂O","H₂O",[["CO₂","CO₂"],["O₂","O₂"],["NaCl","NaCl"]]],["earth",400,"ما الرمز الكيميائي للذهب؟","What is the chemical symbol for gold?","Au","Au",[["Ag","Ag"],["Gd","Gd"],["Go","Go"]]],["earth",400,"ما أكثر غاز في الغلاف الجوي للأرض؟","What is the most common gas in Earth’s air?","النيتروجين","Nitrogen",[["الأكسجين","Oxygen"],["ثاني أكسيد الكربون","Carbon dioxide"],["الأرغون","Argon"]]],["earth",600,"بأي مقياس تُقاس قوة الزلازل؟","Which scale measures how strong an earthquake is?","مقياس ريختر","Richter scale",[["مقياس بوفورت","Beaufort scale"],["مقياس موس","Mohs scale"],["مقياس سلسيوس","Celsius scale"]]],["earth",600,"ما طبقة المعدن السائل في باطن الأرض؟","Which layer deep inside Earth is liquid metal?","اللب الخارجي","Outer core",[["القشرة","Crust"],["الوشاح","Mantle"],["اللب الداخلي","Inner core"]]],["oceans",200,"ما أكبر محيط في العالم؟","What is the largest ocean?","المحيط الهادئ","Pacific Ocean",[["المحيط الأطلسي","Atlantic Ocean"],["المحيط الهندي","Indian Ocean"],["المحيط الجنوبي","Southern Ocean"]]],["oceans",200,"ماذا نسمي ارتفاع ماء البحر وانخفاضه كل يوم؟","What do we call the daily rise and fall of the sea?","المد والجزر","Tides",[["الأمواج","Waves"],["التيارات","Currents"],["التسونامي","Tsunami"]]],["oceans",400,"ما أعمق مكان في محيطات العالم؟","What is the deepest place in the world’s oceans?","خندق ماريانا","Mariana Trench",[["البحر الأحمر","Red Sea"],["خليج المكسيك","Gulf of Mexico"],["البحر الميت","Dead Sea"]]],["oceans",400,"كم تقريبًا نسبة سطح الأرض المغطاة بالماء؟","About how much of Earth’s surface is covered by water?","71%","71%",[["30%","30%"],["50%","50%"],["90%","90%"]]],["oceans",600,"ما أكبر سمكة في العالم؟","What is the largest fish in the world?","قرش الحوت","Whale shark",[["الحوت الأزرق","Blue whale"],["القرش الأبيض","Great white shark"],["التونة","Tuna"]]],["oceans",600,"الشعاب المرجانية في الحقيقة هي…؟","Coral reefs are actually made by…?","حيوانات","Animals",[["نباتات","Plants"],["صخور","Rocks"],["فطريات","Fungi"]]]]};
+function unpack(list) { return list.map(function (r) { return { category: r[0], points: r[1], question: { ar: r[2], en: r[3] }, correct: { ar: r[4], en: r[5] }, wrong: r[6].map(function (w) { return { ar: w[0], en: w[1] }; }) }; }); }
+var QUESTIONS = { kids: unpack(RAW.kids), adults: unpack(RAW.adults) };
+var TIME = { kids: 30, adults: 15 };
+var CALL_BONUS = 30;
+var TEAM_COLORS = ['#5EB8FF', '#FF8FB1'];
+var T = {
+  ar: { category: 'علوم وطبيعة', title: 'تحدّي العلوم', tagline: '6 فئات و36 سؤالًا، وكل سؤال بنقاط حسب صعوبته.', start: 'يلّا نلعب', setup: 'جهّز اللعبة', who: 'مين بيلعب؟', solo: 'لاعب واحد', teams: 'فريقين', age: 'مين اللاعبين؟', kids: 'أطفال', kidsHint: 'أسئلة سهلة ووقت أطول', adults: 'كبار', adultsHint: 'أسئلة أصعب ووقت أقصر', teamNames: 'أسماء الفرق', team0: 'الصقور', team1: 'النجوم', you: 'أنت', go: 'ابدأ التحدي', pts: 'نقطة', yourTurn: 'دوركم', letters: ['أ', 'ب', 'ج', 'د'], undo: 'تراجع', restart: 'إعادة اللعبة', restartShort: 'إعادة', sure: 'متأكد؟', yes: 'إيه', no: 'لا', board: 'لوحة الأسئلة', fifty: 'حذف إجابتين', twoTries: 'جاوب جوابين', pit: 'الحفرة', call: 'اتصل بصديق', tryAgain: 'خطأ! عندكم محاولة ثانية', pitOn: 'الحفرة شغّالة! الصح يخصم من الفريق الثاني', callOn: 'اتصلوا بصديق: +30 ثانية', sec: 'ث', wrong: 'خطأ، الجواب: ', timeout: 'انتهى الوقت! الجواب: ', next: 'السؤال التالي', seeScore: 'شوف النتيجة', final: 'النتيجة النهائية', winner: 'الفائز', tie: 'تعادل!', v5: 'ممتاز! عالِم حقيقي', v3: 'شغل حلو، كمّل', v0: 'جرّب مرة ثانية', again: 'العب مرة ثانية', change: 'غيّر الإعدادات' },
+  en: { category: 'Science & Nature', title: 'Science Challenge', tagline: '6 categories, 36 questions, points by difficulty. Challenge each other!', start: "Let's play", setup: 'Set up the game', who: "Who's playing?", solo: 'One player', teams: 'Two teams', age: 'Who are the players?', kids: 'Kids', kidsHint: 'Easier questions, more time', adults: 'Adults', adultsHint: 'Harder questions, less time', teamNames: 'Team names', team0: 'Falcons', team1: 'Stars', you: 'You', go: 'Start the challenge', pts: 'pts', yourTurn: 'Your turn', letters: ['A', 'B', 'C', 'D'], undo: 'Undo', restart: 'Restart game', restartShort: 'Restart', sure: 'Sure?', yes: 'Yes', no: 'No', board: 'Question board', fifty: '50 / 50', twoTries: 'Two tries', pit: 'The pit', call: 'Call a friend', tryAgain: 'Wrong! You get one more try', pitOn: 'Pit is on! A right answer costs the other team', callOn: 'Call a friend: +30 seconds', sec: 's', wrong: 'Wrong — the answer is ', timeout: "Time's up! The answer is ", next: 'Next question', seeScore: 'See score', final: 'Final score', winner: 'Winner', tie: "It's a tie!", v5: 'Perfect — real scientist!', v3: 'Nice work, keep going', v0: 'Give it another try', again: 'Play again', change: 'Change settings' }
+};
+function rightMsg(L, p) { return L === 'ar' ? 'صح! كسبتوا ' + p + ' نقطة' : 'Correct! +' + p; }
+function pitMsg(L, name, p) { return L === 'ar' ? 'الحفرة! انخصم ' + p + ' من ' + name : 'The pit! ' + name + ' lost ' + p; }
+function leftMsg(L, n) { return L === 'ar' ? 'باقي ' + n + ' سؤال' : n + ' questions left'; }
+function outOfMsg(L, n) { return L === 'ar' ? 'من ' + n + ' نقطة' : 'out of ' + n + ' points'; }
+function correctMsg(L, c, n) { return L === 'ar' ? c + ' إجابة صحيحة من ' + n : c + ' of ' + n + ' correct'; }
+var CONFETTI = [];
+(function () { var cs = ['#A99BFF', '#FFD166', '#5EB8FF', '#FF8FB1', '#3DDC97', '#19C2B0']; for (var i = 0; i < 28; i++) CONFETTI.push({ x: ((i * 37) % 100) + '%', c: cs[i % 6], d: ((i * 13) % 9) / 10 + 's' }); })();
+function answersOf(q) { var all = q.wrong.slice(); all.splice(q.question.en.length % 4, 0, q.correct); return all; }
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { lang: 'ar', screen: 'start', mode: 'teams', age: 'kids', names: ['', ''], results: {}, scores: [0, 0], turn: 0, life: [{}, {}],
+      history: [], pending: null, confirming: false,
+      cur: 0, picked: null, removed: [], tried: [], twoTries: false, pit: false, bonus: 0, notice: '', left: 30 };
+  }
+  componentDidMount() {
+    var self = this;
+    this.tick = setInterval(function () {
+      var s = self.state;
+      if (s.screen !== 'question' || s.picked !== null) return;
+      if (s.left <= 1) self.finish('timeout'); else self.setState({ left: s.left - 1 });
+    }, 1000);
+  }
+  componentWillUnmount() { clearInterval(this.tick); }
+  finish(answer) {
+    var s = this.state; if (s.picked !== null) return;
+    var q = QUESTIONS[s.age][s.cur], right = answer === q.correct;
+    if (!right && answer !== 'timeout' && s.twoTries && s.tried.length === 0) {
+      this.setState({ tried: [answer], notice: T[s.lang].tryAgain });
+      return;
+    }
+    var res = Object.assign({}, s.results); res[s.cur] = { right: right, team: s.turn };
+    var scores = !right ? s.scores : s.scores.map(function (x, i) { return i === s.turn ? x + q.points : s.pit ? Math.max(0, x - q.points) : x; });
+    this.setState({ picked: answer, results: res, scores: scores, left: answer === 'timeout' ? 0 : s.left, history: s.history.concat([s.pending]) });
+  }
+  renderVals() {
+    var s = this.state, self = this, L = s.lang, t = T[L];
+    var teamCount = s.mode === 'teams' ? 2 : 1;
+    var names = s.mode === 'teams' ? [s.names[0].trim() || t.team0, s.names[1].trim() || t.team1] : [t.you];
+    var qs = QUESTIONS[s.age], q = qs[s.cur], answered = s.picked !== null;
+    var doneCount = Object.keys(s.results).length, allDone = doneCount === qs.length;
+    var inGame = s.screen === 'board' || s.screen === 'question' || s.screen === 'end';
+    var choice = function (on, pick, extra) {
+      return Object.assign({ on: String(on), pick: pick, ring: on ? '#A99BFF' : 'rgba(255,255,255,0.09)', shell: on ? 'rgba(169,155,255,0.12)' : 'rgba(255,255,255,0.045)',
+        checkRing: on ? '#A99BFF' : 'rgba(255,255,255,0.09)', checkBg: on ? '#A99BFF' : 'transparent', mark: on ? '✓' : '' }, extra);
+    };
+    var catOf = function (id) { return CATS.filter(function (c) { return c.id === id; })[0]; };
+    var cards = CATS.map(function (c, ci) {
+      var tiles = [];
+      qs.forEach(function (x, i) {
+        if (x.category !== c.id) return;
+        var r = s.results[i], tc = r && r.right ? TEAM_COLORS[r.team] : null;
+        tiles.push({
+          points: x.points, label: c.name[L] + ' ' + x.points,
+          text: !r ? String(x.points) : r.right ? '✓' : '✗',
+          border: !r ? 'rgba(255,255,255,0.09)' : tc || '#2A2840',
+          bg: !r ? 'rgba(255,255,255,0.05)' : tc ? tc + '26' : '#0C0C14',
+          fg: !r ? '#FFD166' : tc || '#8F8AAE',
+          open: function () {
+            var st = self.state;
+            if (st.results[i]) return;
+            self.setState({ screen: 'question', cur: i, picked: null, removed: [], tried: [], twoTries: false, pit: false, bonus: 0, notice: '', left: TIME[st.age],
+              pending: { results: st.results, scores: st.scores, turn: st.turn, life: st.life } });
+          }
+        });
+      });
+      tiles.sort(function (a, b) { return a.points - b.points; });
+      return { img: IMG[c.id], name: c.name[L], halo: c.color + '1A', delay: (Math.floor(ci / 2) * 0.09) + 's',
+        sideA: tiles.filter(function (_, i) { return i % 2 === 0; }), sideB: tiles.filter(function (_, i) { return i % 2 === 1; }) };
+    });
+    var my = s.life[s.turn] || {};
+    var useHelper = function (kind) {
+      return function () {
+        var st = self.state, m = st.life[st.turn] || {};
+        if (m[kind] || st.picked !== null) return;
+        var upd = { life: st.life.map(function (l, i) { if (i !== st.turn) return l; var n = Object.assign({}, l); n[kind] = true; return n; }) };
+        if (kind === 'fifty') { if (st.removed.length) return; upd.removed = q.wrong.filter(function (w) { return st.tried.indexOf(w) < 0; }).slice(0, 2); }
+        if (kind === 'twoTries') { if (st.twoTries) return; upd.twoTries = true; }
+        if (kind === 'pit') { if (st.pit) return; upd.pit = true; upd.notice = T[st.lang].pitOn; }
+        if (kind === 'call') { if (st.bonus) return; upd.bonus = CALL_BONUS; upd.left = st.left + CALL_BONUS; upd.notice = T[st.lang].callOn; }
+        self.setState(upd);
+      };
+    };
+    var helperList = [{ kind: 'fifty', label: t.fifty, active: s.removed.length > 0 }, { kind: 'twoTries', label: t.twoTries, active: s.twoTries }];
+    if (teamCount > 1) helperList.push({ kind: 'pit', label: t.pit, active: s.pit });
+    helperList.push({ kind: 'call', label: t.call, active: s.bonus > 0 });
+    var helpers = helperList.map(function (h, i) {
+      var used = !!my[h.kind], off = used || h.active;
+      return { label: h.label, icon: ICONS[h.kind], use: useHelper(h.kind), off: off ? 'true' : 'false', iconOpacity: off ? '0.45' : '1',
+        border: off ? 'rgba(255,255,255,0.09)' : 'rgba(255,209,102,0.32)', bg: off ? 'rgba(255,255,255,0.045)' : 'rgba(255,209,102,0.07)',
+        fg: off ? '#8F8AAE' : '#FFD166', deco: used ? 'line-through' : 'none', span: helperList.length === 3 && i === 2 ? 'span 2' : 'auto' };
+    });
+    var right = s.picked === q.correct;
+    var answers = answersOf(q).map(function (a, i) {
+      var removed = s.removed.indexOf(a) >= 0, triedWrong = s.tried.indexOf(a) >= 0;
+      var st = { border: 'rgba(255,255,255,0.09)', borderTop: 'rgba(255,255,255,0.14)', bg: '#12121C', fg: '#F5F3FF', badge: t.letters[i], badgeBg: 'rgba(255,255,255,0.06)', badgeFg: '#8F8AAE', anim: '' };
+      if (triedWrong || (answered && a === s.picked && !right)) st = { border: '#FF6B81', borderTop: '#FF6B81', bg: '#2A0F17', fg: '#FFD3DA', badge: '✗', badgeBg: 'rgba(255,255,255,0.22)', badgeFg: '#FFD3DA', anim: 'shake' };
+      else if (answered && a === q.correct) st = { border: '#3DDC97', borderTop: '#3DDC97', bg: '#3DDC97', fg: '#062A1B', badge: '✓', badgeBg: 'rgba(255,255,255,0.22)', badgeFg: '#062A1B', anim: 'pop' };
+      return Object.assign(st, { label: a[L], letter: t.letters[i], opacity: removed ? '0.22' : '1', deco: removed ? 'line-through' : 'none',
+        pick: function () { if (!removed && !triedWrong) self.finish(a); } });
+    });
+    var cat = catOf(q.category), other = (s.turn + 1) % teamCount;
+    var feedback = '';
+    if (answered) {
+      feedback = right ? rightMsg(L, q.points) : (s.picked === 'timeout' ? t.timeout : t.wrong) + q.correct[L];
+      if (right && s.pit && teamCount > 1) feedback += '\n' + pitMsg(L, names[other], q.points);
+    }
+    var sc = s.scores.slice(0, teamCount), best = Math.max.apply(null, sc);
+    var winner = sc.filter(function (x) { return x === best; }).length > 1 ? -1 : sc.indexOf(best);
+    var correct = Object.keys(s.results).filter(function (k) { return s.results[k].right; }).length;
+    var maxPoints = qs.reduce(function (a, x) { return a + x.points; }, 0);
+    var total = TIME[s.age] + s.bonus, low = s.left <= 5;
+    var startGame = function () { self.setState({ screen: 'board', results: {}, scores: [0, 0], turn: 0, life: [{}, {}], history: [], pending: null, picked: null, confirming: false }); };
+    return {
+      dir: L === 'ar' ? 'rtl' : 'ltr', lang: L, t: t, flip: L === 'ar' ? 'scaleX(-1)' : 'none',
+      arOn: String(L === 'ar'), enOn: String(L === 'en'),
+      arBg: L === 'ar' ? '#F5F3FF' : 'transparent', arFg: L === 'ar' ? '#07070D' : '#8F8AAE',
+      enBg: L === 'en' ? '#F5F3FF' : 'transparent', enFg: L === 'en' ? '#07070D' : '#8F8AAE',
+      setAr: function () { self.setState({ lang: 'ar' }); }, setEn: function () { self.setState({ lang: 'en' }); },
+      inGame: inGame, notInGame: !inGame, confirming: s.confirming, notConfirming: !s.confirming,
+      askRestart: function () { self.setState({ confirming: true }); },
+      cancelRestart: function () { self.setState({ confirming: false }); },
+      confirmRestart: startGame,
+      undoOff: String(s.history.length === 0), undoOpacity: s.history.length ? '1' : '0.35',
+      undo: function () {
+        var st = self.state, last = st.history[st.history.length - 1];
+        if (!last) return;
+        self.setState({ results: last.results, scores: last.scores, turn: last.turn, life: last.life, history: st.history.slice(0, -1), pending: null, picked: null, screen: 'board' });
+      },
+      isStart: s.screen === 'start', isSetup: s.screen === 'setup', isBoard: s.screen === 'board', isQuestion: s.screen === 'question', isEnd: s.screen === 'end',
+      isTeams: s.mode === 'teams', isSolo: s.mode === 'solo',
+      cats: CATS.map(function (c, i) { return { img: IMG[c.id], halo: c.color + '1A', ring: c.color + '40', delay: (0.34 + i * 0.07) + 's' }; }),
+      toSetup: function () { self.setState({ screen: 'setup', confirming: false }); },
+      modeCards: [
+        choice(s.mode === 'solo', function () { self.setState({ mode: 'solo' }); }, { title: t.solo }),
+        choice(s.mode === 'teams', function () { self.setState({ mode: 'teams' }); }, { title: t.teams })
+      ],
+      ageCards: [
+        choice(s.age === 'kids', function () { self.setState({ age: 'kids' }); }, { title: t.kids, hint: t.kidsHint, img: IMG.animals }),
+        choice(s.age === 'adults', function () { self.setState({ age: 'adults' }); }, { title: t.adults, hint: t.adultsHint, img: IMG.space })
+      ],
+      name0: s.names[0], name1: s.names[1],
+      editName0: function (e) { self.setState({ names: [e.target.value, self.state.names[1]] }); },
+      editName1: function (e) { self.setState({ names: [self.state.names[0], e.target.value] }); },
+      newGame: startGame,
+      teamChips: names.map(function (n, i) {
+        var active = teamCount > 1 && i === s.turn && s.screen !== 'end';
+        return { name: n, score: s.scores[i], color: TEAM_COLORS[i], ring: active ? TEAM_COLORS[i] : 'rgba(255,255,255,0.09)', shell: active ? TEAM_COLORS[i] + '1F' : 'rgba(255,255,255,0.045)', turnTag: active ? t.yourTurn : '' };
+      }),
+      leftLine: leftMsg(L, qs.length - doneCount),
+      cards: cards,
+      turnColor: TEAM_COLORS[s.turn], turnRing: TEAM_COLORS[s.turn] + '66', turnBg: TEAM_COLORS[s.turn] + '1A', turnName: names[s.turn],
+      waiting: !answered,
+      left: s.left, timerPct: Math.min(100, s.left / total * 100) + '%', timerColor: low ? '#FF6B81' : '#3DDC97', timerRing: low ? '#FF6B8155' : '#3DDC9755', timerText: low ? '#FF6B81' : '#F5F3FF',
+      q: { img: IMG[q.category], color: cat.color, cat: cat.name[L], text: q.question[L], points: q.points },
+      hasNote: !answered && !!s.notice, note: s.notice,
+      helpers: helpers,
+      answers: answers, answered: answered,
+      feedback: feedback, feedbackColor: right ? '#3DDC97' : '#FF6B81',
+      nextLabel: allDone ? t.seeScore : t.next,
+      next: function () { self.setState({ turn: (self.state.turn + 1) % teamCount, screen: allDone ? 'end' : 'board' }); },
+      endLabel: teamCount > 1 ? t.winner : t.final,
+      endTitle: teamCount > 1 ? (winner === -1 ? t.tie : names[winner]) : String(s.scores[0]),
+      endColor: teamCount > 1 ? (winner === -1 ? '#FFD166' : TEAM_COLORS[winner]) : '#F5F3FF',
+      outOf: outOfMsg(L, maxPoints), correctLine: correctMsg(L, correct, qs.length),
+      verdict: correct >= 30 ? t.v5 : correct >= 18 ? t.v3 : t.v0,
+      confetti: CONFETTI
+    };
+  }
+}
+</script>
+</body>
+</html>
