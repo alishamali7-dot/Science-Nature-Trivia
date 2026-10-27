@@ -45,6 +45,9 @@ function Game() {
   const [fontsLoaded] = useFonts(fontFiles);
   const insets = useSafeAreaInsets();
   const { short, wide, column, boardColumns } = useLayout();
+  // Bottom safe zone, the same on every screen: the main button always rests here, clear of the
+  // home indicator / screen edge with breathing room (a little less on short phones).
+  const bottomSafe = Math.max(insets.bottom, space.lg) + (short ? space.lg : space.xl);
   const [lang, setLang] = useState('ar');
   const [screen, setScreen] = useState('start'); // start | setup | board | question | end
 
@@ -241,7 +244,7 @@ function Game() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(insets.bottom, space.lg) + space.sm }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: bottomSafe }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         automaticallyAdjustKeyboardInsets
@@ -266,11 +269,8 @@ function Game() {
                   </View>
                 ))}
               </View>
-              {/* The button belongs to the group, right under the content, not pinned to the bottom edge. */}
-              <View style={styles.ctaGap}>
-                <PrimaryButton icon="play" label={t.start} onPress={() => setScreen('setup')} dir={dir} />
-              </View>
             </View>
+            <PrimaryButton icon="play" label={t.start} onPress={() => setScreen('setup')} dir={dir} />
           </View>
         )}
 
@@ -466,10 +466,10 @@ function Game() {
                 )}
               </FadeIn>
               {teamCount > 1 && <TeamScores names={teamNames} scores={scores} turn={-1} ptsLabel={t.pts} dir={dir} />}
-              <View style={[styles.section, styles.ctaGap]}>
-                <PrimaryButton label={t.again} icon="restart" onPress={newGame} dir={dir} />
-                <PrimaryButton variant="ghost" label={t.change} onPress={() => setScreen('setup')} dir={dir} />
-              </View>
+            </View>
+            <View style={styles.section}>
+              <PrimaryButton label={t.again} icon="restart" onPress={newGame} dir={dir} />
+              <PrimaryButton variant="ghost" label={t.change} onPress={() => setScreen('setup')} dir={dir} />
             </View>
           </View>
         )}
@@ -487,10 +487,9 @@ const styles = StyleSheet.create({
   topBar: { justifyContent: 'space-between', alignItems: 'center', minHeight: 48, gap: space.sm },
   topStart: { alignItems: 'center', gap: space.sm },
   fill: { flex: 1, gap: space.md + 2 },
-  fillShort: { gap: space.sm },
+  fillShort: { gap: 6 },
   centered: { flex: 1, justifyContent: 'center', gap: space.lg },
   headBlock: { gap: space.sm },
-  ctaGap: { marginTop: space.lg },
   bottom: { marginTop: 'auto' },
   section: { gap: 10 },
   sectionShort: { gap: 6 },
