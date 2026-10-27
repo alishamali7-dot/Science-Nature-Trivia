@@ -42,8 +42,36 @@ export const fontFiles = {
   'ThmanyahSerifDisplay-Bold': require('./assets/fonts/thmanyahserifdisplay-Bold.otf'),
 };
 
-// Spring-like easing used by every entrance and press animation.
+// Spacing scale (4-point grid). Screens use `space.lg` as edge padding.
+export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
+
+// Corner radii. Double-bezel cards nest `lg` inside a frame `pad` wide.
+export const radius = { sm: 14, md: 22, lg: 28, full: 999 };
+
+// Named text styles. Arabic needs generous line height for its dots and marks.
+export const type = {
+  display: { fontFamily: fonts.display, fontSize: 46, lineHeight: 72 },
+  displayCompact: { fontFamily: fonts.display, fontSize: 38, lineHeight: 60 },
+  title: { fontFamily: fonts.display, fontSize: 30, lineHeight: 48 },
+  heading: { fontFamily: fonts.displayBold, fontSize: 20, lineHeight: 32 },
+  question: { fontFamily: fonts.bold, fontSize: 24, lineHeight: 38 },
+  questionCompact: { fontFamily: fonts.bold, fontSize: 20, lineHeight: 32 },
+  questionLarge: { fontFamily: fonts.bold, fontSize: 30, lineHeight: 46 },
+  body: { fontFamily: fonts.regular, fontSize: 17, lineHeight: 28 },
+  label: { fontFamily: fonts.bold, fontSize: 17, lineHeight: 26 },
+  button: { fontFamily: fonts.black, fontSize: 18, lineHeight: 28 },
+  callout: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 24 },
+  caption: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 22 },
+  micro: { fontFamily: fonts.bold, fontSize: 12, lineHeight: 18 },
+  score: { fontFamily: fonts.black, fontSize: 22, lineHeight: 30 },
+  points: { fontFamily: fonts.black, fontSize: 15, lineHeight: 22 },
+  hero: { fontFamily: fonts.black, fontSize: 80, lineHeight: 104 },
+};
+
+// Motion durations (ms) and curves. EASE is the iOS sheet curve; EASE_OUT is a strong ease-out for UI.
+export const motion = { press: 120, fast: 180, base: 260, slow: 520 };
 export const EASE = [0.32, 0.72, 0, 1];
+export const EASE_OUT = [0.23, 1, 0.32, 1];
 
 // Seconds per question by age group.
 export const TIME = { kids: 30, adults: 15 };

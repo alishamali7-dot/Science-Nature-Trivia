@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import AnswerButton from './components/AnswerButton';
 import Backdrop from './components/Backdrop';
 import CategoryCard from './components/CategoryCard';
 import Confetti from './components/Confetti';
 import GameBar from './components/GameBar';
+import { haptic } from './components/haptics';
 import Illustration from './components/Illustration';
 import LangToggle from './components/LangToggle';
 import Lifeline from './components/Lifeline';
@@ -16,21 +18,32 @@ import PrimaryButton from './components/PrimaryButton';
 import QuestionCard from './components/QuestionCard';
 import TeamScores from './components/TeamScores';
 import TimerBar from './components/TimerBar';
+import Txt from './components/Txt';
+import useLayout from './components/useLayout';
 import { answersOf, fiftyFifty, scoreAnswer, winnerOf } from './game';
 import { CATEGORIES, QUESTIONS } from './questions';
 import { STRINGS, dirFor } from './strings';
-import { TIME, colors, fontFiles, fonts } from './theme';
+import { TIME, colors, fontFiles, fonts, radius, space } from './theme';
 
 const CALL_BONUS = 30; // seconds added by "call a friend"
 
-// Board layout: two category cards per row, for any number of categories.
-const PAIRS = CATEGORIES.filter((_, i) => i % 2 === 0).map((_, r) => CATEGORIES.slice(r * 2, r * 2 + 2));
-
 const HELPER_ICONS = { fifty: 'half', twoTries: 'repeat', pit: 'pit', call: 'phone' };
 
+// Board rows of `n` category cards each, for any number of categories.
+const rowsOf = (n) => CATEGORIES.filter((_, i) => i % n === 0).map((_, r) => CATEGORIES.slice(r * n, r * n + n));
+
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <Game />
+    </SafeAreaProvider>
+  );
+}
+
+function Game() {
   const [fontsLoaded] = useFonts(fontFiles);
-  const short = useWindowDimensions().height < 760; // iPhone SE-size screens get a tighter layout
+  const insets = useSafeAreaInsets();
+  const { short, wide, column, boardColumns } = useLayout();
   const [lang, setLang] = useState('ar');
   const [screen, setScreen] = useState('start'); // start | setup | board | question | end
 
@@ -109,10 +122,12 @@ export default function App() {
     if (answered) return;
     const right = answer === q.correct;
     if (!right && answer !== 'timeout' && twoTries && tried.length === 0) {
+      haptic.error();
       setTried([answer]);
       setNotice(t.tryAgain);
       return;
     }
+    (right ? haptic.success : haptic.error)();
     setPicked(answer);
     setResults({ ...results, [current]: { right, team: turn } });
     setScores(scoreAnswer(scores, turn, q, right, pit));
@@ -175,82 +190,74 @@ export default function App() {
     if (right && pit && teamCount > 1) feedback += `\n${t.pitHit(teamNames[other], q.points)}`;
   }
 
-  const eyebrow = (text) => (
-    <View style={styles.eyebrow}>
-      <View style={styles.eyebrowDot} />
-      <Text style={styles.eyebrowText}>{text}</Text>
-    </View>
-  );
+  // Phones use the full width; tablets center a readable column (the board gets a wider one).
+  const col = (wider) => (wide ? { width: '100%', maxWidth: wider ? 920 : column, alignSelf: 'center' } : null);
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top + space.sm, paddingStart: insets.left + space.lg, paddingEnd: insets.right + space.lg }]}>
       <Backdrop />
 
-      <View style={[styles.topBar, { flexDirection: dir.row }]}>
+      <View style={[styles.topBar, col(screen === 'board'), { flexDirection: dir.row }]}>
         <LangToggle lang={lang} onChange={setLang} />
         {inGame ? (
           <GameBar canUndo={history.length > 0} onUndo={undo} onRestart={newGame} t={t} dir={dir} />
         ) : (
-          eyebrow(t.category)
+          <Txt variant="caption" color="muted">{t.category}</Txt>
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(insets.bottom, space.lg) + space.sm }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {screen === 'start' && (
-          <View key={`start-${lang}`} style={styles.fill}>
+          <View key={`start-${lang}`} style={[styles.fill, col()]}>
             <View style={styles.centered}>
               <View style={styles.hero}>
                 <Float amount={10}>
-                  <Illustration name="hero" size={short ? 150 : 220} />
+                  <Illustration name="hero" size={short ? 150 : wide ? 280 : 220} />
                 </Float>
               </View>
-              <FadeIn delay={120}>
-                <Text style={[styles.title, short && styles.titleShort, styles.center]}>{t.title}</Text>
-              </FadeIn>
-              <FadeIn delay={240}>
-                <Text style={[styles.body, styles.center]}>{t.tagline}</Text>
+              <FadeIn delay={120} style={styles.headBlock}>
+                <Txt variant={short ? 'displayCompact' : 'display'} style={styles.center} accessibilityRole="header">{t.title}</Txt>
+                <Txt color="soft" style={styles.center}>{t.tagline}</Txt>
               </FadeIn>
               <View style={[styles.artRow, { flexDirection: dir.row }]}>
-                {CATEGORIES.map((c, i) => (
-                  <FadeIn key={c.id} delay={340 + i * 70}>
-                    <View style={[styles.artChip, { backgroundColor: `${c.color}1A`, borderColor: `${c.color}40` }]}>
-                      <Illustration name={c.art} size={36} />
-                    </View>
-                  </FadeIn>
+                {CATEGORIES.map((c) => (
+                  <View key={c.id} style={[styles.artChip, { backgroundColor: `${c.color}1A`, borderColor: `${c.color}40` }]}>
+                    <Illustration name={c.art} size={36} />
+                  </View>
                 ))}
               </View>
             </View>
-            <FadeIn delay={780}>
-              <PrimaryButton label={t.start} onPress={() => setScreen('setup')} dir={dir} />
-            </FadeIn>
+            <PrimaryButton label={t.start} onPress={() => setScreen('setup')} dir={dir} />
           </View>
         )}
 
         {screen === 'setup' && (
-          <View key={`setup-${lang}`} style={[styles.fill, short && styles.fillShort]}>
-            <FadeIn>
-              <Text style={[styles.h1, short && styles.h1Short, dir.text]}>{t.setup}</Text>
-            </FadeIn>
+          <View key={`setup-${lang}`} style={[styles.fill, short && styles.fillShort, col()]}>
+            <Txt variant={short ? 'heading' : 'title'} style={dir.text} accessibilityRole="header">{t.setup}</Txt>
 
-            <FadeIn delay={80} style={[styles.section, short && styles.sectionShort]}>
-              <Text style={[styles.label, dir.text]}>{t.who}</Text>
-              <View style={[styles.pair, { flexDirection: dir.row }]}>
+            <View style={[styles.section, short && styles.sectionShort]}>
+              <Txt variant="caption" color="muted" style={[styles.bold, dir.text]}>{t.who}</Txt>
+              <View style={[styles.pair, { flexDirection: dir.row }]} accessibilityRole="radiogroup">
                 <OptionCard title={t.solo} selected={mode === 'solo'} onPress={() => setMode('solo')} dir={dir} />
                 <OptionCard title={t.teams} selected={mode === 'teams'} onPress={() => setMode('teams')} dir={dir} />
               </View>
-            </FadeIn>
+            </View>
 
-            <FadeIn delay={160} style={[styles.section, short && styles.sectionShort]}>
-              <Text style={[styles.label, dir.text]}>{t.age}</Text>
-              <View style={[styles.pair, { flexDirection: dir.row }]}>
+            <View style={[styles.section, short && styles.sectionShort]}>
+              <Txt variant="caption" color="muted" style={[styles.bold, dir.text]}>{t.age}</Txt>
+              <View style={[styles.pair, { flexDirection: dir.row }]} accessibilityRole="radiogroup">
                 <OptionCard art="animals" compact={short} title={t.kids} hint={t.kidsHint} selected={age === 'kids'} onPress={() => setAge('kids')} dir={dir} />
                 <OptionCard art="space" compact={short} title={t.adults} hint={t.adultsHint} selected={age === 'adults'} onPress={() => setAge('adults')} dir={dir} />
               </View>
-            </FadeIn>
+            </View>
 
             {mode === 'teams' && (
-              <FadeIn delay={240} style={[styles.section, short && styles.sectionShort]}>
-                <Text style={[styles.label, dir.text]}>{t.teamNames}</Text>
+              <FadeIn style={[styles.section, short && styles.sectionShort]}>
+                <Txt variant="caption" color="muted" style={[styles.bold, dir.text]}>{t.teamNames}</Txt>
                 {names.map((n, i) => (
                   <View key={i} style={[styles.inputRow, { flexDirection: dir.row }]}>
                     <View style={[styles.teamDot, { backgroundColor: colors.teams[i] }]} />
@@ -259,6 +266,10 @@ export default function App() {
                       onChangeText={(v) => setNames(names.map((x, j) => (j === i ? v : x)))}
                       placeholder={t.defaultTeams[i]}
                       placeholderTextColor={colors.muted}
+                      selectionColor={colors.accent}
+                      cursorColor={colors.accent}
+                      keyboardAppearance="dark"
+                      returnKeyType="done"
                       maxLength={14}
                       style={[styles.input, short && styles.inputShort, dir.text]}
                       accessibilityLabel={`${t.teamNames} ${i + 1}`}
@@ -275,39 +286,46 @@ export default function App() {
         )}
 
         {screen === 'board' && (
-          <View key={`board-${lang}`} style={styles.fill}>
+          <View key={`board-${lang}`} style={[styles.fill, col(true)]}>
             <TeamScores names={teamNames} scores={scores} turn={turn} ptsLabel={t.pts} turnLabel={t.yourTurn} dir={dir} />
             {!short && (
               <View style={[styles.boardHead, { flexDirection: dir.row }]}>
-                <Text style={[styles.h2, dir.text]}>{t.board}</Text>
-                <Text style={styles.hint}>{t.left(questions.length - doneCount)}</Text>
+                <Txt variant="heading" style={dir.text} accessibilityRole="header">{t.board}</Txt>
+                <Txt variant="caption" color="muted">{t.left(questions.length - doneCount)}</Txt>
               </View>
             )}
-            <View style={styles.board}>
-              {PAIRS.map((pair, pi) => (
-                <FadeIn key={pi} delay={pi * 90} style={[styles.pair, { flexDirection: dir.row }]}>
-                  {pair.map((c) => (
+            <FadeIn style={styles.board}>
+              {rowsOf(boardColumns).map((row, ri) => (
+                <View key={ri} style={[styles.pair, { flexDirection: dir.row }]}>
+                  {row.map((c) => (
                     <CategoryCard key={c.id} category={c} sides={sidesOf(c)} lang={lang} teamColors={colors.teams} />
                   ))}
-                </FadeIn>
+                </View>
               ))}
-            </View>
+            </FadeIn>
           </View>
         )}
 
         {screen === 'question' && (
-          <View key={`q-${current}`} style={[styles.fill, short && styles.fillShort]}>
+          <View key={`q-${current}`} style={[styles.fill, short && styles.fillShort, wide && styles.fillCentered, col()]}>
             {/* Status line: whose turn + timer while answering, then the result. */}
             {answered ? (
               <FadeIn>
-                <Text style={[styles.feedback, { color: right ? colors.right : colors.wrong }]}>{feedback}</Text>
+                <Txt
+                  variant="label"
+                  color={right ? 'right' : 'wrong'}
+                  style={styles.feedback}
+                  accessibilityLiveRegion="assertive"
+                >
+                  {feedback}
+                </Txt>
               </FadeIn>
             ) : (
               <View style={[styles.status, { flexDirection: dir.row }]}>
                 {teamCount > 1 && (
                   <View style={[styles.turn, { flexDirection: dir.row, borderColor: `${colors.teams[turn]}66`, backgroundColor: `${colors.teams[turn]}1A` }]}>
                     <View style={[styles.teamDot, { backgroundColor: colors.teams[turn] }]} />
-                    <Text style={[styles.turnText, { color: colors.teams[turn] }]} numberOfLines={1}>{teamNames[turn]}</Text>
+                    <Txt variant="callout" color={colors.teams[turn]} style={styles.turnText} numberOfLines={1}>{teamNames[turn]}</Txt>
                   </View>
                 )}
                 <View style={styles.timer}>
@@ -315,21 +333,21 @@ export default function App() {
                 </View>
               </View>
             )}
-            <FadeIn>
-              <QuestionCard
-                category={CATEGORIES.find((c) => c.id === q.category)}
-                question={q.question[lang]}
-                points={q.points}
-                ptsLabel={t.pts}
-                note={answered ? '' : notice}
-                compact={short}
-                dir={dir}
-                lang={lang}
-              />
-            </FadeIn>
+            <QuestionCard
+              category={CATEGORIES.find((c) => c.id === q.category)}
+              question={q.question[lang]}
+              points={q.points}
+              ptsLabel={t.pts}
+              note={answered ? '' : notice}
+              compact={short}
+              large={wide}
+              dir={dir}
+              lang={lang}
+            />
+            {/* The one authored moment on this screen: answers rise in, one after another. */}
             <View style={[styles.answers, short && styles.answersShort]}>
               {answersOf(q).map((a, i) => (
-                <FadeIn key={a.en} delay={120 + i * 70}>
+                <FadeIn key={a.en} delay={80 + i * 60}>
                   <AnswerButton
                     compact={short}
                     letter={t.letters[i]}
@@ -346,11 +364,10 @@ export default function App() {
                 </FadeIn>
               ))}
             </View>
-            <View style={styles.footer}>
+            {/* Phones pin the actions to the bottom for the thumb; tablets keep them with the answers. */}
+            <View style={wide ? styles.footerWide : styles.footer}>
               {answered ? (
-                <FadeIn>
-                  <PrimaryButton label={allDone ? t.seeScore : t.next} onPress={next} dir={dir} />
-                </FadeIn>
+                <PrimaryButton label={allDone ? t.seeScore : t.next} onPress={next} dir={dir} />
               ) : (
                 <View style={[styles.helpers, { flexDirection: dir.row }]}>
                   {helpers.map((h) => (
@@ -373,7 +390,7 @@ export default function App() {
         )}
 
         {screen === 'end' && (
-          <View key={`end-${lang}`} style={styles.fill}>
+          <View key={`end-${lang}`} style={[styles.fill, col()]}>
             <View style={styles.centered}>
               <View style={styles.hero}>
                 <Float amount={8}>
@@ -381,32 +398,27 @@ export default function App() {
                 </Float>
               </View>
               <FadeIn delay={100} style={styles.centerBox}>
-                {eyebrow(teamCount > 1 ? t.winner : t.final)}
                 {teamCount > 1 ? (
-                  <Text style={[styles.winner, { color: winner === -1 ? colors.gold : colors.teams[winner] }]}>
-                    {winner === -1 ? t.tie : teamNames[winner]}
-                  </Text>
+                  <Txt variant={short ? 'displayCompact' : 'display'} color={winner === -1 ? 'gold' : colors.teams[winner]} style={styles.center} accessibilityRole="header">
+                    {winner === -1 ? t.tie : t.wins(teamNames[winner])}
+                  </Txt>
                 ) : (
                   <>
-                    <Text style={styles.bigScore}>{scores[0]}</Text>
-                    <Text style={styles.hint}>{t.outOf(maxPoints)}</Text>
-                    <Text style={styles.correctLine}>{t.correctOf(correctCount, questions.length)}</Text>
-                    <Text style={[styles.body, styles.center]}>
+                    <Txt variant="hero" style={styles.num} accessibilityRole="header">{scores[0]}</Txt>
+                    <Txt variant="caption" color="muted">{t.outOf(maxPoints)}</Txt>
+                    <Txt variant="label" style={styles.gapTop}>{t.correctOf(correctCount, questions.length)}</Txt>
+                    <Txt color="soft" style={styles.center}>
                       {correctCount >= 30 ? t.v5 : correctCount >= 18 ? t.v3 : t.v0}
-                    </Text>
+                    </Txt>
                   </>
                 )}
               </FadeIn>
-              {teamCount > 1 && (
-                <FadeIn delay={250}>
-                  <TeamScores names={teamNames} scores={scores} turn={-1} ptsLabel={t.pts} dir={dir} />
-                </FadeIn>
-              )}
+              {teamCount > 1 && <TeamScores names={teamNames} scores={scores} turn={-1} ptsLabel={t.pts} dir={dir} />}
             </View>
-            <FadeIn delay={400} style={styles.section}>
+            <View style={styles.section}>
               <PrimaryButton label={t.again} icon="restart" onPress={newGame} dir={dir} />
               <PrimaryButton variant="ghost" label={t.change} onPress={() => setScreen('setup')} dir={dir} />
-            </FadeIn>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -418,54 +430,43 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, paddingTop: 54, paddingHorizontal: 16 },
-  scroll: { flexGrow: 1, paddingTop: 16, paddingBottom: 28 },
-  topBar: { justifyContent: 'space-between', alignItems: 'center', minHeight: 46 },
-  eyebrow: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5,
-    backgroundColor: colors.shell, borderWidth: 1, borderColor: colors.hairline,
-  },
-  eyebrowDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent },
-  eyebrowText: { color: colors.soft, fontSize: 13, lineHeight: 20, fontFamily: fonts.medium },
-  fill: { flex: 1, gap: 14 },
-  fillShort: { gap: 8 },
-  centered: { flex: 1, justifyContent: 'center', gap: 16 },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  scroll: { flexGrow: 1, paddingTop: space.lg },
+  topBar: { justifyContent: 'space-between', alignItems: 'center', minHeight: 48 },
+  fill: { flex: 1, gap: space.md + 2 },
+  fillShort: { gap: space.sm },
+  centered: { flex: 1, justifyContent: 'center', gap: space.lg },
+  headBlock: { gap: space.sm },
   bottom: { marginTop: 'auto' },
   section: { gap: 10 },
-  pair: { gap: 8 },
+  sectionShort: { gap: 6 },
+  pair: { gap: space.sm },
   center: { textAlign: 'center' },
   centerBox: { alignItems: 'center', gap: 6 },
   hero: { alignItems: 'center' },
-  artRow: { justifyContent: 'center', flexWrap: 'wrap', gap: 8 },
-  artChip: { borderRadius: 999, borderWidth: 1, padding: 4 },
-  title: { color: colors.text, fontSize: 48, lineHeight: 76, fontFamily: fonts.display },
-  h1: { color: colors.text, fontSize: 32, lineHeight: 50, fontFamily: fonts.display },
-  h1Short: { fontSize: 26, lineHeight: 40 },
-  titleShort: { fontSize: 40, lineHeight: 62 },
-  sectionShort: { gap: 6 },
-  h2: { color: colors.text, fontSize: 20, lineHeight: 32, fontFamily: fonts.displayBold },
-  label: { color: colors.muted, fontSize: 14, lineHeight: 22, fontFamily: fonts.bold },
-  body: { color: colors.soft, fontSize: 17, lineHeight: 28, fontFamily: fonts.regular },
-  hint: { color: colors.muted, fontSize: 14, lineHeight: 22, fontFamily: fonts.medium },
+  artRow: { justifyContent: 'center', flexWrap: 'wrap', gap: space.sm },
+  artChip: { borderRadius: radius.full, borderWidth: 1, padding: space.xs },
+  bold: { fontFamily: fonts.bold },
   inputRow: {
-    alignItems: 'center', gap: 10, borderRadius: 999, paddingHorizontal: 18,
+    alignItems: 'center', gap: 10, borderRadius: radius.full, paddingHorizontal: 18,
     backgroundColor: colors.core, borderWidth: 1, borderColor: colors.hairline, borderTopColor: colors.highlight,
   },
   input: { flex: 1, minHeight: 54, color: colors.text, fontSize: 17, fontFamily: fonts.bold },
   inputShort: { minHeight: 44 },
   teamDot: { width: 10, height: 10, borderRadius: 5 },
   boardHead: { justifyContent: 'space-between', alignItems: 'center' },
-  board: { gap: 8 },
+  board: { gap: space.sm },
   status: { alignItems: 'center', gap: 10, minHeight: 40 },
-  turn: { maxWidth: '45%', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 12 },
-  turnText: { flexShrink: 1, fontSize: 15, lineHeight: 24, fontFamily: fonts.bold },
+  turn: { maxWidth: '45%', alignItems: 'center', gap: space.sm, borderWidth: 1, borderRadius: radius.full, paddingVertical: 5, paddingHorizontal: space.md },
+  turnText: { flexShrink: 1 },
   timer: { flex: 1 },
   answers: { gap: 10 },
-  answersShort: { gap: 8 },
-  helpers: { flexWrap: 'wrap', gap: 8 },
+  answersShort: { gap: space.sm },
+  helpers: { flexWrap: 'wrap', gap: space.sm },
   footer: { marginTop: 'auto' },
-  feedback: { minHeight: 40, fontSize: 18, lineHeight: 28, fontFamily: fonts.black, textAlign: 'center', textAlignVertical: 'center' },
-  winner: { fontSize: 46, lineHeight: 74, fontFamily: fonts.display, textAlign: 'center' },
-  bigScore: { color: colors.text, fontSize: 80, lineHeight: 104, fontFamily: fonts.black },
-  correctLine: { color: colors.text, fontSize: 20, lineHeight: 32, fontFamily: fonts.bold, marginTop: 6 },
+  footerWide: { marginTop: space.md },
+  fillCentered: { justifyContent: 'center' },
+  feedback: { minHeight: 40, fontFamily: fonts.black, textAlign: 'center', textAlignVertical: 'center' },
+  num: { fontVariant: ['tabular-nums'] },
+  gapTop: { marginTop: 6 },
 });

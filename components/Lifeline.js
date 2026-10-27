@@ -1,37 +1,46 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, fonts } from '../theme';
+import { StyleSheet } from 'react-native';
+import { colors, fonts, radius, space } from '../theme';
 import Icon from './Icon';
+import Tap from './Tap';
+import Txt from './Txt';
 
-// A once-per-team helper as a small glass pill with a thin icon.
+// A once-per-team helper: a small gold pill with a thin icon.
 export default function Lifeline({ label, icon, used, usedLabel, disabled, compact, onPress, dir }) {
   const off = used || disabled;
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
+      haptic="select"
       disabled={off}
+      outer={[styles.outer, compact && styles.outerCompact]}
       accessibilityRole="button"
       accessibilityLabel={used ? `${label}, ${usedLabel}` : label}
       accessibilityState={{ disabled: off }}
-      style={({ pressed }) => [styles.btn, compact && styles.compact, { flexDirection: compact ? 'column' : dir.row }, off && styles.off, pressed && styles.pressed]}
+      style={[styles.btn, compact && styles.compact, { flexDirection: compact ? 'column' : dir.row }, off && styles.off]}
     >
       <Icon name={icon} size={compact ? 16 : 18} color={off ? colors.muted : colors.gold} />
-      <Text style={[styles.label, compact && styles.labelCompact, off && styles.labelOff, used && styles.struck]} numberOfLines={1}>
+      <Txt
+        variant={compact ? 'micro' : 'caption'}
+        color={off ? 'muted' : 'gold'}
+        style={[styles.label, used && styles.struck]}
+        numberOfLines={1}
+        maxFontSizeMultiplier={1.3}
+      >
         {label}
-      </Text>
-    </Pressable>
+      </Txt>
+    </Tap>
   );
 }
 
 const styles = StyleSheet.create({
+  outer: { flexBasis: '46%', flexGrow: 1 },
+  outerCompact: { flexBasis: '22%' },
   btn: {
-    flexBasis: '46%', flexGrow: 1, minHeight: 48, borderRadius: 999, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 10,
+    minHeight: 48, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', gap: space.sm, paddingHorizontal: 10,
     backgroundColor: 'rgba(255,209,102,0.07)', borderWidth: 1, borderColor: 'rgba(255,209,102,0.32)',
   },
-  compact: { flexBasis: '22%', minHeight: 52, borderRadius: 18, gap: 2, paddingHorizontal: 2 },
+  compact: { minHeight: 52, borderRadius: 18, borderCurve: 'continuous', gap: 2, paddingHorizontal: 2 },
   off: { backgroundColor: colors.shell, borderColor: colors.hairline },
-  pressed: { transform: [{ scale: 0.97 }], backgroundColor: 'rgba(255,209,102,0.16)' },
-  label: { color: colors.gold, fontSize: 14, lineHeight: 22, fontFamily: fonts.bold },
-  labelCompact: { fontSize: 12, lineHeight: 18 },
-  labelOff: { color: colors.muted },
+  label: { fontFamily: fonts.bold },
   struck: { textDecorationLine: 'line-through' },
 });

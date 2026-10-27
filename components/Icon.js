@@ -1,3 +1,4 @@
+import { View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 // Thin-line icons (1.6 stroke). `flip` mirrors directional icons for Arabic.
@@ -15,21 +16,21 @@ const PATHS = {
 
 export default function Icon({ name, size = 20, color = '#fff', flip = false, strokeWidth = 1.6 }) {
   return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={flip ? { transform: [{ scaleX: -1 }] } : undefined}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-    >
-      {name === 'half' && <Circle cx="12" cy="12" r="8.5" />}
-      {(PATHS[name] || []).map((d) => <Path key={d} d={d} />)}
-    </Svg>
+    <View aria-hidden pointerEvents="none">
+      <Svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={flip ? { transform: [{ scaleX: -1 }] } : undefined}
+      >
+        {name === 'half' && <Circle cx="12" cy="12" r="8.5" />}
+        {(PATHS[name] || []).map((d) => <Path key={d} d={d} />)}
+      </Svg>
+    </View>
   );
 }

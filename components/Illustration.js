@@ -1,12 +1,15 @@
+import { View } from 'react-native';
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 
 // Hand-drawn vector art per category, plus a hero scene for the start screen.
 export default function Illustration({ name, size = 64 }) {
   const Art = ART[name] || ART.space;
   return (
-    <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Art />
-    </Svg>
+    <View aria-hidden pointerEvents="none">
+      <Svg width={size} height={size} viewBox="0 0 100 100">
+        <Art />
+      </Svg>
+    </View>
   );
 }
 

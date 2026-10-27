@@ -1,56 +1,65 @@
-import { useEffect, useRef } from 'react';
-import { Animated, Easing } from 'react-native';
-import { EASE } from '../theme';
+import { useEffect } from 'react';
+import Animated, {
+  Easing,
+  FadeInDown,
+  ReduceMotion,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { EASE_OUT, motion } from '../theme';
 
-const SPRING = Easing.bezier(...EASE);
+// All motion runs on the UI thread (Reanimated) and respects the system "reduce motion" setting.
+const OUT = Easing.bezier(...EASE_OUT);
 
-// Fades and slides children in when they mount. Use `delay` to stagger a list.
-export function FadeIn({ delay = 0, from = 22, style, children }) {
-  const v = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(v, { toValue: 1, duration: 700, delay, easing: SPRING, useNativeDriver: true }).start();
-  }, []);
-  const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [from, 0] });
-  return <Animated.View style={[style, { opacity: v, transform: [{ translateY }] }]}>{children}</Animated.View>;
+// Rises into place when it mounts. Used once per screen block, staggered with `delay`.
+export function FadeIn({ delay = 0, style, children }) {
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(motion.slow).delay(delay).easing(OUT).reduceMotion(ReduceMotion.System)}
+      style={style}
+    >
+      {children}
+    </Animated.View>
+  );
 }
 
-// Gentle up-and-down loop for illustrations.
+// Gentle hover loop for illustrations; still when reduce motion is on.
 export function Float({ amount = 8, duration = 2600, children }) {
-  const v = useRef(new Animated.Value(0)).current;
+  const reduced = useReducedMotion();
+  const y = useSharedValue(0);
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(v, { toValue: 1, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(v, { toValue: 0, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, []);
-  const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [0, -amount] });
-  return <Animated.View style={{ transform: [{ translateY }] }}>{children}</Animated.View>;
+    if (reduced) return;
+    y.set(withRepeat(withTiming(-amount, { duration, easing: Easing.inOut(Easing.sin) }), -1, true));
+  }, [reduced]);
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: y.get() }] }));
+  return <Animated.View style={style}>{children}</Animated.View>;
 }
 
-// Springy scale bump every time `trigger` changes (skips the first render).
+// Springy bump when `trigger` changes to a truthy/new value (skips the first render).
 export function usePop(trigger) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const first = useRef(true);
+  const scale = useSharedValue(1);
   useEffect(() => {
-    if (first.current) { first.current = false; return; }
-    scale.setValue(1.12);
-    Animated.spring(scale, { toValue: 1, friction: 4, tension: 160, useNativeDriver: true }).start();
+    if (!trigger) return;
+    scale.set(withSequence(
+      withTiming(1.05, { duration: motion.press, easing: OUT, reduceMotion: ReduceMotion.System }),
+      withSpring(1, { duration: 400, dampingRatio: 0.55, reduceMotion: ReduceMotion.System }),
+    ));
   }, [trigger]);
-  return scale;
+  return useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
 }
 
 // Short horizontal shake when `active` turns true.
 export function useShake(active) {
-  const x = useRef(new Animated.Value(0)).current;
+  const x = useSharedValue(0);
   useEffect(() => {
     if (!active) return;
-    Animated.sequence(
-      [10, -10, 7, -7, 3, 0].map((toValue) => Animated.timing(x, { toValue, duration: 50, useNativeDriver: true })),
-    ).start();
+    const step = (to) => withTiming(to, { duration: 50, reduceMotion: ReduceMotion.System });
+    x.set(withSequence(step(9), step(-9), step(6), step(-6), step(3), step(0)));
   }, [active]);
-  return x;
+  return useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
 }

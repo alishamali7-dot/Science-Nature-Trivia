@@ -23,7 +23,7 @@ Before committing, also confirm it bundles: `npx expo export --platform android 
 | `game.js` | Pure rules: answer order, 50/50, scoring (incl. the pit), winner. Covered by `game.check.js` |
 | `strings.js` | Every UI string in `ar` and `en`, plus `dirFor(lang)` for right-to-left layout |
 | `theme.js` | Colors, fonts, easing curve, time per age group |
-| `components/` | Reusable pieces: `Bezel` (glass double-frame card), `PrimaryButton`, `AnswerButton`, `QuestionCard`, `CategoryCard`, `TeamScores`, `GameBar` (undo/restart), `Lifeline`, `OptionCard`, `TimerBar`, `LangToggle`, `Illustration` (category art), `Icon` (thin-line icons), `Backdrop` (glows), `Motion` (FadeIn, Float, usePop, useShake), `Confetti` |
+| `components/` | Primitives: `Txt` (all text), `Tap` (all presses + haptics), `haptics`, `useLayout` (phone/short/tablet). Pieces: `Bezel` (glass double-frame card), `PrimaryButton`, `AnswerButton`, `QuestionCard`, `CategoryCard`, `TeamScores`, `GameBar` (undo/restart), `Lifeline`, `OptionCard`, `TimerBar`, `LangToggle`, `Illustration` (category art), `Icon` (thin-line icons), `Backdrop` (glows), `Motion` (FadeIn, Float, usePop, useShake), `Confetti` |
 | `design/` | The design canvas prototype source and the SVG art. Live canvas: https://claude.ai/artifact/5wnrqUW2GWmrHRM7wikQYe |
 
 ## Built to grow — how to extend
@@ -37,10 +37,14 @@ Before committing, also confirm it bundles: `npx expo export --platform android 
 
 ## Design system (keep it consistent)
 
+Product truth lives in `PRODUCT.md` (users, platform, what must be kept). The canvas shows every screen on phone and iPad.
+
 - Look: "night game show". Background `#07070D` with two soft glows (`Backdrop`); content sits in double-bezel glass cards (`Bezel`); buttons are pills with the arrow in its own circle; icons are thin lines (1.6 stroke).
-- Colors come from `theme.js` only. Violet `accent`, gold for points, green `right`, red `wrong`, one color per team.
-- Fonts: Thmanyah Sans for UI, Thmanyah Serif Display for big titles. Custom fonts choose weight by family name, never `fontWeight`.
-- Motion uses the spring curve `EASE` from `theme.js`; animate only transform and opacity.
+- **Tokens live in `theme.js` only**: `colors`, `space` (4-pt grid), `radius`, `type` (named text styles), `motion`, `EASE`/`EASE_OUT`. No raw hex, font sizes or spacing in screens.
+- **Text goes through `Txt`** (`variant` from `type`, `color` from `colors`). Custom fonts choose weight by family name, never `fontWeight`.
+- **Everything tappable goes through `Tap`**: scale-down on press-in, optional `haptic` ('tap' | 'select' | 'heavy' | 'success' | 'error' from `components/haptics.js`). One haptic per action, always with a visual.
+- **Motion is Reanimated** (`components/Motion.js`): runs on the UI thread and respects reduce-motion. One authored moment per screen (answers rising in, the right-answer pop, winner confetti); don't add entrances to everything.
+- **Screen sizes** come from `components/useLayout.js`: `short` phones get compact sizes; `wide` (tablet) gets a centered 560 column, big board cards (2 per row portrait, 3 landscape), and the question block centered with helpers under the answers. Safe-area insets come from `react-native-safe-area-context`.
 
 ## Rules that bite
 
