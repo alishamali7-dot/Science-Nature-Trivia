@@ -3,7 +3,7 @@ import { colors, fonts } from '../theme';
 import { usePop, useShake } from './Motion';
 
 // state: 'idle' | 'correct' | 'wrong'. `removed` = taken out by 50/50.
-export default function AnswerButton({ label, state = 'idle', removed, disabled, onPress, dir }) {
+export default function AnswerButton({ label, state = 'idle', removed, disabled, compact, onPress, dir }) {
   const scale = usePop(state === 'correct');
   const shakeX = useShake(state === 'wrong');
   return (
@@ -13,7 +13,7 @@ export default function AnswerButton({ label, state = 'idle', removed, disabled,
         disabled={disabled || removed}
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled || removed }}
-        style={({ pressed }) => [styles.button, styles[state], pressed && styles.pressed]}
+        style={({ pressed }) => [styles.button, compact && styles.compact, styles[state], pressed && styles.pressed]}
       >
         <Text style={[styles.label, dir.text, state === 'correct' && styles.dark, state === 'wrong' && styles.wrongText, removed && styles.struck]}>
           {state === 'correct' ? '✓  ' : state === 'wrong' ? '✗  ' : ''}
@@ -26,6 +26,7 @@ export default function AnswerButton({ label, state = 'idle', removed, disabled,
 
 const styles = StyleSheet.create({
   button: { minHeight: 58, borderRadius: 18, borderWidth: 2, paddingHorizontal: 20, justifyContent: 'center' },
+  compact: { minHeight: 48 },
   idle: { backgroundColor: colors.card, borderColor: colors.line },
   correct: { backgroundColor: colors.accent, borderColor: colors.accent },
   wrong: { backgroundColor: colors.wrongBg, borderColor: colors.wrong },

@@ -14,14 +14,15 @@ export function fiftyFifty(q, random = Math.random) {
   return pool;
 }
 
-// Points the current team gets for this answer.
-export function pointsFor(q, right, doubled) {
-  return right ? q.points * (doubled ? 2 : 1) : 0;
+// New scores after an answer. With the pit (الحفرة), a right answer also takes
+// the same points from every other team (never below zero).
+export function scoreAnswer(scores, turn, q, right, pit = false) {
+  if (!right) return scores;
+  return scores.map((s, i) => (i === turn ? s + q.points : pit ? Math.max(0, s - q.points) : s));
 }
 
 // Index of the winning team, or -1 for a tie.
 export function winnerOf(scores) {
   const best = Math.max(...scores);
-  const top = scores.filter((s) => s === best);
-  return top.length > 1 ? -1 : scores.indexOf(best);
+  return scores.filter((s) => s === best).length > 1 ? -1 : scores.indexOf(best);
 }

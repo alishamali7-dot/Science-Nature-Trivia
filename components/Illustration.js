@@ -62,6 +62,16 @@ const ART = {
       <Star x={76} y={26} r={2.6} c="#FFFFFF" /><Star x={24} y={66} r={1.8} c="#BDE8FF" />
     </G>
   ),
+  oceans: () => (
+    <G>
+      <Circle cx="50" cy="50" r="46" fill="#0B3B3A" />
+      <Path d="M22 60 C40 40 64 40 76 54 C64 68 40 72 22 60Z" fill="#2DD4BF" />
+      <Path d="M74 54 L88 44 L86 64Z" fill="#2DD4BF" />
+      <Circle cx="34" cy="54" r="3.5" fill="#0B3B3A" />
+      <Circle cx="56" cy="26" r="3" fill="#9FF3E7" /><Circle cx="64" cy="18" r="2" fill="#9FF3E7" />
+      <Path d="M14 80 Q26 72 38 80 T62 80 T86 80" stroke="#5EEAD4" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+    </G>
+  ),
   hero: () => (
     <G>
       <Circle cx="50" cy="50" r="48" fill="#141C33" />
