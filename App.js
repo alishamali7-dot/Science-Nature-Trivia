@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { BackHandler, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import AnswerButton from './components/AnswerButton';
+import BackButton from './components/BackButton';
 import Backdrop from './components/Backdrop';
 import CategoryCard from './components/CategoryCard';
 import Confetti from './components/Confetti';
@@ -59,6 +60,7 @@ function Game() {
   const [lifelines, setLifelines] = useState([{}, {}]); // per team: { fifty, twoTries, pit, call }, once each
   const [history, setHistory] = useState([]); // game snapshots before each answered question, for Undo
   const [pending, setPending] = useState(null); // snapshot taken when the current question opened
+  const [gameConfig, setGameConfig] = useState(null); // { mode, age } of the game in progress, so setup can offer "continue"
 
   // Current question
   const [current, setCurrent] = useState(0);
@@ -83,6 +85,13 @@ function Game() {
     return () => clearTimeout(id);
   }, [screen, answered, left]);
 
+  // Android's system Back button runs the same "go back" as the on-screen button.
+  const backRef = useRef(null);
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => (backRef.current ? backRef.current() : false));
+    return () => sub.remove();
+  }, []);
+
   if (!fontsLoaded) return <View style={styles.screen} />;
 
   const t = STRINGS[lang];
@@ -101,6 +110,7 @@ function Game() {
     setHistory([]);
     setPending(null);
     setPicked(null);
+    setGameConfig({ mode, age });
     setScreen('board');
   };
 
@@ -161,6 +171,26 @@ function Game() {
     setScreen(allDone ? 'end' : 'board');
   };
 
+  // Back to the previous screen. Leaving an unanswered question puts it back on the board as if
+  // it was never opened (helpers used on it come back). Returns false on the start screen so
+  // Android can close the app.
+  const goBack = () => {
+    if (screen === 'setup') setScreen('start');
+    else if (screen === 'board') setScreen('setup');
+    else if (screen === 'question' && answered) next();
+    else if (screen === 'question') {
+      if (pending) setLifelines(pending.lifelines);
+      setPending(null);
+      setScreen('board');
+    } else if (screen === 'end') setScreen('board');
+    else return false;
+    return true;
+  };
+  backRef.current = goBack;
+
+  // A game in progress can be continued from setup, as long as players and age group are unchanged.
+  const canResume = gameConfig && gameConfig.mode === mode && gameConfig.age === age;
+
   const right = picked === q.correct;
   const winner = winnerOf(scores);
   const correctCount = Object.values(results).filter((r) => r.right).length;
@@ -198,7 +228,11 @@ function Game() {
       <Backdrop />
 
       <View style={[styles.topBar, col(screen === 'board'), { flexDirection: dir.row }]}>
-        <LangToggle lang={lang} onChange={setLang} />
+        <View style={[styles.topStart, { flexDirection: dir.row }]}>
+          {screen !== 'start' && <BackButton onPress={goBack} label={t.back} dir={dir} />}
+          {/* During a game the bar holds undo/restart; language is changed from setup (then "continue game"). */}
+          {!inGame && <LangToggle lang={lang} onChange={setLang} />}
+        </View>
         {inGame ? (
           <GameBar canUndo={history.length > 0} onUndo={undo} onRestart={newGame} t={t} dir={dir} />
         ) : (
@@ -209,6 +243,8 @@ function Game() {
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(insets.bottom, space.lg) + space.sm }]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}
       >
         {screen === 'start' && (
@@ -279,14 +315,21 @@ function Game() {
               </FadeIn>
             )}
 
-            <View style={styles.bottom}>
-              <PrimaryButton label={t.go} onPress={newGame} dir={dir} />
+            <View style={[styles.bottom, styles.section]}>
+              {canResume ? (
+                <>
+                  <PrimaryButton label={t.resume} onPress={() => setScreen('board')} dir={dir} />
+                  <PrimaryButton variant="ghost" size={short ? 'sm' : 'md'} icon="restart" label={t.fresh} onPress={newGame} dir={dir} />
+                </>
+              ) : (
+                <PrimaryButton label={t.go} onPress={newGame} dir={dir} />
+              )}
             </View>
           </View>
         )}
 
         {screen === 'board' && (
-          <View key={`board-${lang}`} style={[styles.fill, col(true)]}>
+          <View key={`board-${lang}`} style={[styles.fill, short && styles.fillShort, col(true)]}>
             <TeamScores names={teamNames} scores={scores} turn={turn} ptsLabel={t.pts} turnLabel={t.yourTurn} dir={dir} />
             {!short && (
               <View style={[styles.boardHead, { flexDirection: dir.row }]}>
@@ -303,6 +346,12 @@ function Game() {
                 </View>
               ))}
             </FadeIn>
+            {/* Reached after going back from the results: a way forward to them again. */}
+            {allDone && (
+              <View style={styles.bottom}>
+                <PrimaryButton label={t.seeScore} onPress={() => setScreen('end')} dir={dir} />
+              </View>
+            )}
           </View>
         )}
 
@@ -432,7 +481,8 @@ function Game() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   scroll: { flexGrow: 1, paddingTop: space.lg },
-  topBar: { justifyContent: 'space-between', alignItems: 'center', minHeight: 48 },
+  topBar: { justifyContent: 'space-between', alignItems: 'center', minHeight: 48, gap: space.sm },
+  topStart: { alignItems: 'center', gap: space.sm },
   fill: { flex: 1, gap: space.md + 2 },
   fillShort: { gap: space.sm },
   centered: { flex: 1, justifyContent: 'center', gap: space.lg },

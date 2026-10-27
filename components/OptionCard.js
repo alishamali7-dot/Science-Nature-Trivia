@@ -31,7 +31,7 @@ export default function OptionCard({ title, hint, art, selected, compact, onPres
               {check}
             </View>
             <Txt variant="label" style={dir.text}>{title}</Txt>
-            {hint && <Txt variant="caption" color="muted" style={[styles.hint, dir.text]}>{hint}</Txt>}
+            {!!hint && <Txt variant="caption" color="muted" style={[styles.hint, dir.text]}>{hint}</Txt>}
           </>
         ) : (
           <>

@@ -52,6 +52,7 @@ Product truth lives in `PRODUCT.md` (users, platform, what must be kept). The ca
 - **Arabic text:** never use `letterSpacing` or `textTransform` on Arabic; keep line height ≥ 1.5 for body text; use `؟` and `،`. A leading `+` before a number flips in Arabic ("600+"), so phrase points without the sign (see `right` in `strings.js`).
 - **Right-to-left:** take layout direction from `dirFor(lang)` (`dir.row`, `dir.text`); don't hard-code `row` or `left`/`right` for content. `I18nManager.isRTL` is `undefined` on web, so it's read as `!!I18nManager.isRTL`.
 - **Fit every screen:** nothing may be cut off. Check at 390×844 and 375×667 (iPhone SE), in both languages, including a question with a helper message showing and the answered state. Short screens (`height < 760`) use the compact sizes already wired in.
+- **Back** (`goBack` in `App.js`, also Android's system Back): setup → start, board → setup (game kept; setup offers "continue" while players and age are unchanged), unanswered question → board as if never opened (its helpers come back), answered question → same as Next, results → board (which then offers "see score"). During a game the top bar shows Back + Undo/Restart; language is switched from setup.
 - Undo history stores a snapshot when a question **opens** and commits it when the question is **answered**; anything new that changes game state must be included in that snapshot.
 
 ## Course checklist (where this stands)

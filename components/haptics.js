@@ -1,8 +1,7 @@
-import { Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 // One haptic per user action, always paired with a visual. Silent on web.
-const safe = (fn) => () => { if (Platform.OS !== 'web') fn().catch(() => {}); };
+const safe = (fn) => () => { if (process.env.EXPO_OS !== 'web') fn().catch(() => {}); };
 
 export const haptic = {
   tap: safe(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)),
