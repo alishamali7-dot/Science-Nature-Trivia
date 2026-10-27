@@ -1,19 +1,13 @@
 import { StyleSheet, Text } from 'react-native';
-import { colors } from '../theme';
+import { colors, fonts } from '../theme';
 
-export default function ScoreBadge({ score }) {
-  return <Text style={styles.badge}>Score {score}</Text>;
+export default function ScoreBadge({ score, label }) {
+  return <Text style={styles.badge}>{score} {label}</Text>;
 }
 
 const styles = StyleSheet.create({
   badge: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '700',
-    backgroundColor: '#1C4232',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    overflow: 'hidden',
+    color: colors.gold, backgroundColor: colors.chip, fontSize: 16, fontFamily: fonts.black,
+    paddingVertical: 4, paddingHorizontal: 14, borderRadius: 999, overflow: 'hidden',
   },
 });

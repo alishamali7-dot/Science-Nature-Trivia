@@ -1,120 +1,180 @@
 import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { useFonts, Cairo_400Regular, Cairo_600SemiBold, Cairo_700Bold, Cairo_800ExtraBold } from '@expo-google-fonts/cairo';
 import AnswerButton from './components/AnswerButton';
+import CategoryTile from './components/CategoryTile';
+import LangToggle from './components/LangToggle';
+import PrimaryButton from './components/PrimaryButton';
 import QuestionCard from './components/QuestionCard';
 import ScoreBadge from './components/ScoreBadge';
 import { QUESTIONS } from './questions';
-import { colors } from './theme';
+import { STRINGS, dirFor } from './strings';
+import { colors, fonts } from './theme';
 
-// Answers in a fixed order for now (shuffling is an Extra level).
+// Fixed answer order for now (shuffling is an Extra level): the right answer goes in a different slot per question.
 const answersOf = (q) => {
   const all = [...q.wrong];
-  all.splice(q.question.length % 4, 0, q.correct);
+  all.splice((q.points / 100) % 4, 0, q.correct);
   return all;
 };
 
 export default function App() {
-  const [index, setIndex] = useState(0);
-  const [score, setScore] = useState(0);
+  const [fontsLoaded] = useFonts({ Cairo_400Regular, Cairo_600SemiBold, Cairo_700Bold, Cairo_800ExtraBold });
+  const [lang, setLang] = useState('ar');
+  const [screen, setScreen] = useState('start'); // start | board | question | end
+  const [current, setCurrent] = useState(0);
+  const [results, setResults] = useState({}); // question index -> 'right' | 'wrong'
   const [picked, setPicked] = useState(null);
-  const [finished, setFinished] = useState(false);
+  const [score, setScore] = useState(0);
 
-  const q = QUESTIONS[index];
+  if (!fontsLoaded) return <View style={styles.screen} />;
+
+  const t = STRINGS[lang];
+  const dir = dirFor(lang);
+  const q = QUESTIONS[current];
   const answered = picked !== null;
-  const isLast = index === QUESTIONS.length - 1;
+  const allDone = Object.keys(results).length === QUESTIONS.length;
+  const correctCount = Object.values(results).filter((r) => r === 'right').length;
+
+  const newGame = () => {
+    setResults({});
+    setPicked(null);
+    setScore(0);
+    setScreen('board');
+  };
+
+  const open = (i) => {
+    setCurrent(i);
+    setPicked(null);
+    setScreen('question');
+  };
 
   const pick = (answer) => {
     if (answered) return;
+    const right = answer === q.correct;
     setPicked(answer);
-    if (answer === q.correct) setScore(score + 1);
+    setResults({ ...results, [current]: right ? 'right' : 'wrong' });
+    if (right) setScore(score + q.points);
   };
-
-  const next = () => {
-    if (isLast) return setFinished(true);
-    setIndex(index + 1);
-    setPicked(null);
-  };
-
-  const playAgain = () => {
-    setIndex(0);
-    setScore(0);
-    setPicked(null);
-    setFinished(false);
-  };
-
-  if (finished) {
-    return (
-      <View style={styles.screen}>
-        <View style={styles.endTop}>
-          <Text style={styles.kicker}>Final score</Text>
-          <Text style={styles.bigScore}>{score}/{QUESTIONS.length}</Text>
-          <Text style={styles.verdict}>
-            {score === QUESTIONS.length ? 'Perfect — real scientist.' : score >= 3 ? 'Nice work, explorer.' : 'Keep exploring!'}
-          </Text>
-        </View>
-        <PrimaryButton label="Play again" onPress={playAgain} />
-        <StatusBar style="light" />
-      </View>
-    );
-  }
-
-  const right = picked === q.correct;
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
-        <Text style={styles.kicker}>Science & Nature</Text>
-        <ScoreBadge score={score} />
+      <View style={[styles.topBar, { flexDirection: dir.row }]}>
+        <LangToggle lang={lang} onChange={setLang} />
+        {(screen === 'board' || screen === 'question') && <ScoreBadge score={score} label={t.pts} />}
       </View>
 
-      <QuestionCard topic={q.topic} question={q.question} />
+      {screen === 'start' && (
+        <View style={styles.fill}>
+          <View style={styles.startTop}>
+            <Text style={[styles.kicker, dir.text]}>{t.category}</Text>
+            <Text style={[styles.title, dir.text]}>{t.title}</Text>
+            <Text style={[styles.body, dir.text]}>{t.tagline}</Text>
+            <View style={styles.steps}>
+              {t.steps.map((s, i) => (
+                <View key={s} style={[styles.step, { flexDirection: dir.row }]}>
+                  <Text style={styles.stepNum}>{i + 1}</Text>
+                  <Text style={[styles.stepText, dir.text]}>{s}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+          <PrimaryButton label={t.start} onPress={newGame} />
+        </View>
+      )}
 
-      <View style={styles.answers}>
-        {answersOf(q).map((a) => (
-          <AnswerButton
-            key={a}
-            label={a}
-            disabled={answered}
-            state={!answered ? 'idle' : a === q.correct ? 'correct' : a === picked ? 'wrong' : 'idle'}
-            onPress={() => pick(a)}
-          />
-        ))}
-      </View>
+      {screen === 'board' && (
+        <View style={styles.fill}>
+          <View style={styles.gapSm}>
+            <Text style={[styles.h2, dir.text]}>{t.pick}</Text>
+            <Text style={[styles.hint, dir.text]}>{t.pickHint}</Text>
+          </View>
+          <View style={[styles.board, { flexDirection: dir.row }]}>
+            {QUESTIONS.map((item, i) => (
+              <CategoryTile
+                key={item.points}
+                topic={item.topic[lang]}
+                points={item.points}
+                result={results[i]}
+                wide={i === QUESTIONS.length - 1}
+                onPress={() => open(i)}
+                dir={dir}
+              />
+            ))}
+          </View>
+        </View>
+      )}
 
-      <View style={styles.footer}>
-        {answered && (
-          <>
-            <Text style={[styles.feedback, { color: right ? colors.accent : colors.wrong }]}>
-              {right ? 'Correct!' : 'Wrong!'}
-            </Text>
-            <PrimaryButton label={isLast ? 'See score' : 'Next'} onPress={next} />
-          </>
-        )}
-      </View>
+      {screen === 'question' && (
+        <View style={styles.fill}>
+          <QuestionCard topic={q.topic[lang]} question={q.question[lang]} points={q.points} ptsLabel={t.pts} dir={dir} />
+          <View style={styles.answers}>
+            {answersOf(q).map((a) => (
+              <AnswerButton
+                key={a.en}
+                label={a[lang]}
+                disabled={answered}
+                state={!answered ? 'idle' : a === q.correct ? 'correct' : a === picked ? 'wrong' : 'idle'}
+                onPress={() => pick(a)}
+                dir={dir}
+              />
+            ))}
+          </View>
+          <View style={styles.footer}>
+            {answered && (
+              <>
+                <Text style={[styles.feedback, { color: picked === q.correct ? colors.accent : colors.wrong }]}>
+                  {picked === q.correct ? t.right + q.points : t.wrong + q.correct[lang]}
+                </Text>
+                <PrimaryButton light label={allDone ? t.seeScore : t.toBoard} onPress={() => setScreen(allDone ? 'end' : 'board')} />
+              </>
+            )}
+          </View>
+        </View>
+      )}
+
+      {screen === 'end' && (
+        <View style={styles.fill}>
+          <View style={styles.endTop}>
+            <Text style={styles.hint}>{t.final}</Text>
+            <Text style={styles.bigScore}>{score}</Text>
+            <Text style={styles.hint}>{t.outOf}</Text>
+            <Text style={styles.correctLine}>{correctCount}{t.correctOf}</Text>
+            <Text style={styles.body}>{correctCount === QUESTIONS.length ? t.v5 : correctCount >= 3 ? t.v3 : t.v0}</Text>
+          </View>
+          <PrimaryButton label={t.again} onPress={newGame} />
+        </View>
+      )}
+
       <StatusBar style="light" />
     </View>
   );
 }
 
-function PrimaryButton({ label, onPress }) {
-  return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [styles.primary, pressed && { opacity: 0.8 }]}>
-      <Text style={styles.primaryLabel}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, paddingTop: 64, paddingHorizontal: 20, paddingBottom: 36, gap: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  kicker: { color: colors.muted, fontSize: 14, letterSpacing: 1.5, textTransform: 'uppercase' },
+  screen: { flex: 1, backgroundColor: colors.bg, paddingTop: 56, paddingHorizontal: 20, paddingBottom: 32, gap: 18 },
+  topBar: { justifyContent: 'space-between', alignItems: 'center' },
+  fill: { flex: 1, gap: 16, justifyContent: 'space-between' },
+  startTop: { gap: 12, paddingTop: 24 },
+  kicker: { color: colors.muted, fontSize: 15, fontFamily: fonts.semi },
+  title: { color: colors.text, fontSize: 44, lineHeight: 60, fontFamily: fonts.black },
+  body: { color: colors.soft, fontSize: 17, lineHeight: 27, fontFamily: fonts.regular, textAlign: 'center' },
+  steps: { gap: 10, marginTop: 12 },
+  step: { alignItems: 'center', gap: 12, backgroundColor: colors.card, borderRadius: 14, padding: 12 },
+  stepNum: {
+    width: 32, height: 32, borderRadius: 10, overflow: 'hidden', backgroundColor: colors.accent, color: colors.bg,
+    textAlign: 'center', lineHeight: 32, fontFamily: fonts.black, fontSize: 16,
+  },
+  stepText: { flex: 1, color: colors.text, fontSize: 16, lineHeight: 24, fontFamily: fonts.semi },
+  gapSm: { gap: 2 },
+  h2: { color: colors.text, fontSize: 28, lineHeight: 40, fontFamily: fonts.black },
+  hint: { color: colors.muted, fontSize: 15, lineHeight: 24, fontFamily: fonts.regular },
+  board: { flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12, marginBottom: 'auto' },
   answers: { gap: 12, marginTop: 'auto' },
-  footer: { minHeight: 100, gap: 12, justifyContent: 'flex-end' },
-  feedback: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
-  primary: { height: 60, borderRadius: 16, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
-  primaryLabel: { color: colors.bg, fontSize: 18, fontWeight: '700' },
-  endTop: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  bigScore: { color: colors.accent, fontSize: 96, fontWeight: '800' },
-  verdict: { color: colors.text, fontSize: 18 },
+  footer: { minHeight: 110, gap: 10, justifyContent: 'flex-end' },
+  feedback: { fontSize: 19, lineHeight: 30, fontFamily: fonts.black, textAlign: 'center' },
+  endTop: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  bigScore: { color: colors.accent, fontSize: 84, lineHeight: 104, fontFamily: fonts.black },
+  correctLine: { color: colors.text, fontSize: 20, lineHeight: 32, fontFamily: fonts.bold, marginTop: 10 },
 });
