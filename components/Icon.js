@@ -4,6 +4,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 // Thin-line icons (1.6 stroke). `flip` mirrors directional icons for Arabic.
 const PATHS = {
   arrow: ['M5 12h14', 'M13 6l6 6-6 6'],
+  chevron: ['M9.5 5.5l6.5 6.5-6.5 6.5'],
   undo: ['M9 14L4 9l5-5', 'M4 9h10.5a5.5 5.5 0 0 1 0 11H11'],
   restart: ['M3.5 12a8.5 8.5 0 1 0 2.6-6.1', 'M3.5 4v5h5'],
   check: ['M5 12.5l4.5 4.5L19 7'],
@@ -29,6 +30,10 @@ export default function Icon({ name, size = 20, color = '#fff', flip = false, st
         style={flip ? { transform: [{ scaleX: -1 }] } : undefined}
       >
         {name === 'half' && <Circle cx="12" cy="12" r="8.5" />}
+        {/* Solid play triangle with soft corners, nudged right so it looks optically centered. */}
+        {name === 'play' && (
+          <Path d="M9 5.6v12.8a1.2 1.2 0 0 0 1.8 1l10-6.4a1.2 1.2 0 0 0 0-2l-10-6.4A1.2 1.2 0 0 0 9 5.6Z" fill={color} stroke="none" />
+        )}
         {(PATHS[name] || []).map((d) => <Path key={d} d={d} />)}
       </Svg>
     </View>

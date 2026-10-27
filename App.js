@@ -266,8 +266,11 @@ function Game() {
                   </View>
                 ))}
               </View>
+              {/* The button belongs to the group, right under the content, not pinned to the bottom edge. */}
+              <View style={styles.ctaGap}>
+                <PrimaryButton icon="play" label={t.start} onPress={() => setScreen('setup')} dir={dir} />
+              </View>
             </View>
-            <PrimaryButton label={t.start} onPress={() => setScreen('setup')} dir={dir} />
           </View>
         )}
 
@@ -318,11 +321,11 @@ function Game() {
             <View style={[styles.bottom, styles.section]}>
               {canResume ? (
                 <>
-                  <PrimaryButton label={t.resume} onPress={() => setScreen('board')} dir={dir} />
+                  <PrimaryButton icon="play" label={t.resume} onPress={() => setScreen('board')} dir={dir} />
                   <PrimaryButton variant="ghost" size={short ? 'sm' : 'md'} icon="restart" label={t.fresh} onPress={newGame} dir={dir} />
                 </>
               ) : (
-                <PrimaryButton label={t.go} onPress={newGame} dir={dir} />
+                <PrimaryButton icon="play" label={t.go} onPress={newGame} dir={dir} />
               )}
             </View>
           </View>
@@ -463,10 +466,10 @@ function Game() {
                 )}
               </FadeIn>
               {teamCount > 1 && <TeamScores names={teamNames} scores={scores} turn={-1} ptsLabel={t.pts} dir={dir} />}
-            </View>
-            <View style={styles.section}>
-              <PrimaryButton label={t.again} icon="restart" onPress={newGame} dir={dir} />
-              <PrimaryButton variant="ghost" label={t.change} onPress={() => setScreen('setup')} dir={dir} />
+              <View style={[styles.section, styles.ctaGap]}>
+                <PrimaryButton label={t.again} icon="restart" onPress={newGame} dir={dir} />
+                <PrimaryButton variant="ghost" label={t.change} onPress={() => setScreen('setup')} dir={dir} />
+              </View>
             </View>
           </View>
         )}
@@ -487,6 +490,7 @@ const styles = StyleSheet.create({
   fillShort: { gap: space.sm },
   centered: { flex: 1, justifyContent: 'center', gap: space.lg },
   headBlock: { gap: space.sm },
+  ctaGap: { marginTop: space.lg },
   bottom: { marginTop: 'auto' },
   section: { gap: 10 },
   sectionShort: { gap: 6 },

@@ -7,7 +7,7 @@ import Tap from './Tap';
 export default function BackButton({ onPress, label, dir }) {
   return (
     <Tap onPress={onPress} haptic="tap" hitSlop={4} accessibilityRole="button" accessibilityLabel={label} style={styles.btn}>
-      <Icon name="arrow" size={20} color={colors.text} flip={!dir.rtl} />
+      <Icon name="chevron" size={20} strokeWidth={2.2} color={colors.text} flip={!dir.rtl} />
     </Tap>
   );
 }
