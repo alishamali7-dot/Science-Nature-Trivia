@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Thmanyah font: license forbids redistributing the files, keep them local
+assets/fonts/thmanyah*

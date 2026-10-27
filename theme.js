@@ -12,12 +12,28 @@ export const colors = {
   wrong: '#FF7A6B',
   wrongBg: '#3A1A1C',
   wrongText: '#FFD6D0',
+  teams: ['#3FB6FF', '#FF6B8B'],
 };
 
-// Cairo covers Arabic and Latin. Custom fonts pick weight by family, not fontWeight.
+// Thmanyah (خط ثمانية): Sans for the interface, Serif Display for big titles.
+// Custom fonts pick weight by family, not fontWeight.
 export const fonts = {
-  regular: 'Cairo_400Regular',
-  semi: 'Cairo_600SemiBold',
-  bold: 'Cairo_700Bold',
-  black: 'Cairo_800ExtraBold',
+  regular: 'ThmanyahSans-Regular',
+  medium: 'ThmanyahSans-Medium',
+  bold: 'ThmanyahSans-Bold',
+  black: 'ThmanyahSans-Black',
+  display: 'ThmanyahSerifDisplay-Black',
+  displayBold: 'ThmanyahSerifDisplay-Bold',
 };
+
+export const fontFiles = {
+  'ThmanyahSans-Regular': require('./assets/fonts/thmanyahsans-Regular.otf'),
+  'ThmanyahSans-Medium': require('./assets/fonts/thmanyahsans-Medium.otf'),
+  'ThmanyahSans-Bold': require('./assets/fonts/thmanyahsans-Bold.otf'),
+  'ThmanyahSans-Black': require('./assets/fonts/thmanyahsans-Black.otf'),
+  'ThmanyahSerifDisplay-Black': require('./assets/fonts/thmanyahserifdisplay-Black.otf'),
+  'ThmanyahSerifDisplay-Bold': require('./assets/fonts/thmanyahserifdisplay-Bold.otf'),
+};
+
+// Seconds per question by age group.
+export const TIME = { kids: 30, adults: 15 };

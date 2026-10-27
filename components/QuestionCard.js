@@ -1,12 +1,21 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../theme';
+import Illustration from './Illustration';
+import { Float } from './Motion';
 
-export default function QuestionCard({ topic, question, points, ptsLabel, dir }) {
+export default function QuestionCard({ category, question, points, ptsLabel, doubled, dir, lang }) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { borderColor: category.color }]}>
       <View style={[styles.top, { flexDirection: dir.row }]}>
-        <Text style={styles.topic}>{topic}</Text>
-        <Text style={styles.points}>{points} {ptsLabel}</Text>
+        <Float amount={4}>
+          <Illustration name={category.art} size={52} />
+        </Float>
+        <View style={styles.meta}>
+          <Text style={[styles.topic, dir.text, { color: category.color }]}>{category.name[lang]}</Text>
+          <Text style={[styles.points, dir.text]}>
+            {doubled ? `${points * 2} ${ptsLabel}  ×2` : `${points} ${ptsLabel}`}
+          </Text>
+        </View>
       </View>
       <Text style={[styles.question, dir.text]}>{question}</Text>
     </View>
@@ -14,12 +23,10 @@ export default function QuestionCard({ topic, question, points, ptsLabel, dir })
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderRadius: 22, padding: 22, gap: 12 },
-  top: { justifyContent: 'space-between', alignItems: 'center' },
-  topic: { color: colors.accent, fontSize: 15, fontFamily: fonts.bold },
-  points: {
-    color: colors.bg, backgroundColor: colors.gold, fontSize: 14, fontFamily: fonts.black,
-    paddingHorizontal: 12, paddingVertical: 2, borderRadius: 999, overflow: 'hidden',
-  },
-  question: { color: colors.text, fontSize: 25, lineHeight: 36, fontFamily: fonts.bold },
+  card: { backgroundColor: colors.card, borderRadius: 24, borderWidth: 2, padding: 20, gap: 14 },
+  top: { alignItems: 'center', gap: 12 },
+  meta: { flex: 1, gap: 2 },
+  topic: { fontSize: 16, lineHeight: 24, fontFamily: fonts.bold },
+  points: { color: colors.gold, fontSize: 15, lineHeight: 22, fontFamily: fonts.black },
+  question: { color: colors.text, fontSize: 24, lineHeight: 38, fontFamily: fonts.bold },
 });
