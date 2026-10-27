@@ -14,6 +14,8 @@ node game.check.js          # game rules + question bank shape; must print "OK" 
 
 Before committing, also confirm it bundles: `npx expo export --platform android --output-dir <temp dir>`.
 
+**Website:** https://science-challenge-psi.vercel.app (Next.js in `website/`, Vercel project `science-challenge`). `/play` is this app's web build; rebuild it after app changes and deploy with the commands in `website/README.md`. The web build loads open Google Fonts (`fontFiles.web.js`) because the Thmanyah files may not be published.
+
 ## Where things live
 
 | File | What it holds |
@@ -60,4 +62,4 @@ Product truth lives in `PRODUCT.md` (users, platform, what must be kept). The ca
 ## Course checklist (where this stands)
 
 - Core / Extra / Boss features are in, except: shuffled answer order (answers use a fixed order per question in `game.js`) and the Vercel web deploy.
-- Not done yet: connect and push to the GitHub `trivia-app` repo (needs the SSH address), and test on a real phone in Expo Go (needs `npx expo login`).
+- Pushed to https://github.com/alishamali7-dot/Science-Nature-Trivia; web version deployed on Vercel (see Website above).

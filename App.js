@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BackHandler, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, BackHandler, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import AnswerButton from './components/AnswerButton';
@@ -69,7 +69,9 @@ function Game() {
   const [pending, setPending] = useState(null); // snapshot taken when the current question opened
   const [gameConfig, setGameConfig] = useState(null); // { mode, age } of the game in progress, so setup can offer "continue"
   const [deck, setDeck] = useState(null); // this game's questions, from the API (built-in where it falls short)
-  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(null); // { kind: 'rate' | 'network' | 'empty', wait }
+  const [retryIn, setRetryIn] = useState(0); // seconds until the automatic retry after "too many requests"
+  const loadId = useRef(0);
   // API questions already asked on this phone, kept across games and app restarts so they don't come back.
   const seen = useRef(new Set());
   useEffect(() => {
@@ -92,6 +94,14 @@ function Game() {
   const questions = deck || QUESTIONS[age];
   const q = questions[current];
   const answered = picked !== null;
+
+  // "Too many requests": count down, then try again by itself.
+  useEffect(() => {
+    if (screen !== 'loading' || loadError?.kind !== 'rate') return;
+    if (retryIn <= 0) return void newGame();
+    const id = setTimeout(() => setRetryIn((s) => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [screen, loadError, retryIn]);
 
   // Countdown: one tick per second while a question is open and unanswered.
   useEffect(() => {
@@ -118,11 +128,23 @@ function Game() {
   const allDone = doneCount === questions.length;
   const inGame = screen === 'board' || screen === 'question' || screen === 'end';
 
-  const newGame = async () => {
-    if (loading) return;
-    setLoading(true);
-    const fresh = await loadQuestions(age, QUESTIONS[age], CATEGORIES, seen.current);
-    setLoading(false);
+  // Load a fresh deck on the loading screen, which shows progress, a problem, or "no questions found".
+  // Leaving that screen (Back) drops a load still on its way.
+  async function newGame() {
+    const load = ++loadId.current;
+    setLoadError(null);
+    setScreen('loading');
+    try {
+      const fresh = await loadQuestions(age, QUESTIONS[age], CATEGORIES, seen.current);
+      if (load === loadId.current) startGame(fresh);
+    } catch (e) {
+      if (load !== loadId.current) return;
+      setLoadError({ kind: e.kind || 'network', wait: e.wait || 0 });
+      if (e.kind === 'rate') setRetryIn(e.wait);
+    }
+  }
+
+  const startGame = (fresh) => {
     setDeck(fresh);
     setResults({});
     setScores(Array(teamCount).fill(0));
@@ -203,6 +225,10 @@ function Game() {
   const goBack = () => {
     if (screen === 'setup') setScreen('start');
     else if (screen === 'board') setScreen('setup');
+    else if (screen === 'loading') {
+      loadId.current += 1; // drop the load still on its way
+      setScreen('setup');
+    }
     else if (screen === 'question' && answered) next();
     else if (screen === 'question') {
       if (pending) setLifelines(pending.lifelines);
@@ -343,12 +369,42 @@ function Game() {
               {canResume ? (
                 <>
                   <PrimaryButton icon="play" label={t.resume} onPress={() => setScreen('board')} dir={dir} />
-                  <PrimaryButton variant="ghost" size={short ? 'sm' : 'md'} icon="restart" label={loading ? t.loading : t.fresh} onPress={newGame} dir={dir} />
+                  <PrimaryButton variant="ghost" size={short ? 'sm' : 'md'} icon="restart" label={t.fresh} onPress={newGame} dir={dir} />
                 </>
               ) : (
-                <PrimaryButton icon="play" label={loading ? t.loading : t.go} onPress={newGame} dir={dir} />
+                <PrimaryButton icon="play" label={t.go} onPress={newGame} dir={dir} />
               )}
             </View>
+          </View>
+        )}
+
+        {screen === 'loading' && (
+          <View style={[styles.fill, col()]}>
+            <View style={styles.centered}>
+              <View style={styles.hero}>
+                <Float amount={8}>
+                  <Illustration name="hero" size={short ? 120 : wide ? 220 : 170} />
+                </Float>
+              </View>
+              <View style={styles.headBlock} accessibilityLiveRegion="polite">
+                <Txt variant="heading" style={styles.center} accessibilityRole="header">
+                  {loadError ? t[`${loadError.kind}Title`] : t.loadingTitle}
+                </Txt>
+                <Txt color="soft" style={styles.center}>
+                  {!loadError ? t.loadingBody : loadError.kind === 'rate' ? t.rateBody(retryIn) : t[`${loadError.kind}Body`]}
+                </Txt>
+              </View>
+              {(!loadError || loadError.kind === 'rate') && <ActivityIndicator color={colors.accent} size="large" />}
+            </View>
+            {loadError?.kind === 'network' && (
+              <PrimaryButton icon="restart" label={t.retry} onPress={newGame} dir={dir} />
+            )}
+            {loadError?.kind === 'empty' && (
+              <View style={styles.section}>
+                <PrimaryButton icon="play" label={t.playBuiltIn} onPress={() => startGame(QUESTIONS[age])} dir={dir} />
+                <PrimaryButton variant="ghost" size={short ? 'sm' : 'md'} label={t.change} onPress={goBack} dir={dir} />
+              </View>
+            )}
           </View>
         )}
 

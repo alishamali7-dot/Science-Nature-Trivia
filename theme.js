@@ -33,14 +33,8 @@ export const fonts = {
   displayBold: 'ThmanyahSerifDisplay-Bold',
 };
 
-export const fontFiles = {
-  'ThmanyahSans-Regular': require('./assets/fonts/thmanyahsans-Regular.otf'),
-  'ThmanyahSans-Medium': require('./assets/fonts/thmanyahsans-Medium.otf'),
-  'ThmanyahSans-Bold': require('./assets/fonts/thmanyahsans-Bold.otf'),
-  'ThmanyahSans-Black': require('./assets/fonts/thmanyahsans-Black.otf'),
-  'ThmanyahSerifDisplay-Black': require('./assets/fonts/thmanyahserifdisplay-Black.otf'),
-  'ThmanyahSerifDisplay-Bold': require('./assets/fonts/thmanyahserifdisplay-Bold.otf'),
-};
+// The phone loads the Thmanyah files; the website (fontFiles.web.js) loads open Google Fonts instead.
+export { fontFiles } from './fontFiles';
 
 // Spacing scale (4-point grid). Screens use `space.lg` as edge padding.
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };

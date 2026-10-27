@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { answersOf, fiftyFifty, scoreAnswer, winnerOf } from './game.js';
 import { CATEGORIES, QUESTIONS } from './questions.js';
-import { DIFFICULTY, fillCategory } from './trivia.js';
+import { DIFFICULTY, fillCategory, loadQuestions } from './trivia.js';
 
 const q = {
   points: 400,
@@ -54,5 +54,27 @@ assert.equal(new Set(filled.map((x) => x.question.en)).size, 6);
 // Questions asked in earlier games come last: unseen ones first, seen ones only when nothing else is left.
 const again = fillCategory(builtIn, { easy: [], medium: [api('m1'), api('m2'), api('m3'), api('m4')] }, DIFFICULTY.kids, new Set(['m1', 'm2']));
 assert.deepEqual(again.map((x) => x.question.en).slice(0, 4), ['m3', 'm4', 'm1', 'm2']);
+
+// Loading problems come back as a LoadError the screen can explain.
+const fail = async (respond) => {
+  globalThis.fetch = respond;
+  try {
+    await loadQuestions('kids', QUESTIONS.kids, CATEGORIES, new Set());
+    return null;
+  } catch (e) {
+    return e;
+  }
+};
+const reply = (status, body = [], headers = {}) => async () => ({
+  status, ok: status === 200, json: async () => body, headers: { get: (k) => headers[k] ?? null },
+});
+let err = await fail(reply(429, [], { 'ratelimit-reset': '4' }));
+assert.equal(err.kind, 'rate');
+assert.equal(err.wait, 4);
+assert.equal((await fail(reply(429))).wait, 5); // no header: wait 5 seconds
+assert.equal((await fail(reply(500))).kind, 'network');
+assert.equal((await fail(async () => { throw new TypeError('offline'); })).kind, 'network');
+assert.equal((await fail(reply(200, []))).kind, 'empty');
+assert.equal(await fail(reply(200, [api('x1', 'easy'), api('x2', 'medium')])), null); // some questions: plays
 
 console.log('game rules and question bank OK');

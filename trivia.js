@@ -53,24 +53,41 @@ export function fillCategory(builtIn, pools, plan, seen = new Set()) {
   });
 }
 
+// Why a load failed, for the screen to explain: 'rate' (too many requests; `wait` seconds until the
+// API takes more), 'network' (no internet or the server failed), 'empty' (the API had no questions).
+export class LoadError extends Error {
+  constructor(kind, wait = 0) {
+    super(kind);
+    this.kind = kind;
+    this.wait = wait;
+  }
+}
+
 // One request per category (the API allows 20 requests per 5 seconds), grouped by difficulty here.
 async function fetchPools(tags, difficulties, kids) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 8000);
+  let res;
   try {
-    const res = await fetch(`${API}?limit=50&types=text_choice&tags=${tags}&difficulties=${difficulties.join(',')}`, { signal: ctrl.signal });
-    if (!res.ok) return {};
-    // Niche questions are too obscure for children.
-    const list = (await res.json()).filter((x) => !(kids && x.isNiche));
-    return Object.fromEntries(difficulties.map((d) => [d, list.filter((x) => x.difficulty === d)]));
+    res = await fetch(`${API}?limit=50&types=text_choice&tags=${tags}&difficulties=${difficulties.join(',')}`, { signal: ctrl.signal });
   } catch {
-    return {};
+    throw new LoadError('network');
   } finally {
     clearTimeout(timer);
   }
+  if (res.status === 429) {
+    const wait = Number(res.headers.get('ratelimit-reset') || res.headers.get('retry-after'));
+    throw new LoadError('rate', wait > 0 ? wait : 5);
+  }
+  if (!res.ok) throw new LoadError('network');
+  // Niche questions are too obscure for children.
+  const list = (await res.json()).filter((x) => !(kids && x.isNiche));
+  return Object.fromEntries(difficulties.map((d) => [d, list.filter((x) => x.difficulty === d)]));
 }
 
 // A fresh deck in the same shape and order as `builtIn` (the built-in list for this age group).
+// Throws a LoadError when the API can't be reached or has no questions at all; a category that only
+// runs short borrows, then falls back to its built-in question.
 export async function loadQuestions(age, builtIn, categories, seen) {
   const plan = DIFFICULTY[age];
   const needed = [...new Set(Object.values(plan))];
@@ -80,5 +97,7 @@ export async function loadQuestions(age, builtIn, categories, seen) {
       return fillCategory(builtIn.filter((x) => x.category === c.id), pools, plan, seen);
     }),
   );
-  return decks.flat();
+  const deck = decks.flat();
+  if (!deck.some((x) => x.id)) throw new LoadError('empty');
+  return deck;
 }

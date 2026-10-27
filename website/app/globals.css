@@ -1,0 +1,89 @@
+/* Same "night game show" look as the app: near-black ground, violet and teal glows, gold for points. */
+:root {
+  --bg: #07070D;
+  --line: rgba(255, 255, 255, 0.09);
+  --text: #F5F3FF;
+  --soft: #CFCBE6;
+  --muted: #8F8AAE;
+  --violet: #7C5CFF;
+  --violet-soft: #A99BFF;
+  --gold: #FFD166;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  background-image:
+    radial-gradient(60% 45% at 90% 0%, rgba(124, 92, 255, 0.32), transparent 70%),
+    radial-gradient(60% 45% at 0% 100%, rgba(25, 194, 176, 0.18), transparent 70%);
+  background-attachment: fixed;
+  color: var(--text);
+  font: 400 17px/1.6 var(--body), system-ui, sans-serif;
+}
+a { color: var(--violet-soft); }
+a:focus-visible { outline: 2px solid var(--violet-soft); outline-offset: 3px; }
+
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-block: 56px 64px;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 88px;
+}
+h1, h2 { font-family: var(--display), Georgia, serif; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(48px, 8vw, 88px); font-weight: 900; line-height: 1.02; }
+h2 { font-size: 36px; font-weight: 700; line-height: 1.2; }
+.eyebrow { margin: 0; color: var(--violet-soft); font-weight: 500; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+.hero { display: grid; grid-template-columns: 1fr minmax(240px, 340px); gap: 56px; align-items: center; }
+.hero-text { display: grid; gap: 20px; min-width: 0; }
+.lede { margin: 0; color: var(--soft); font-size: 19px; max-width: 54ch; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.play, .ghost {
+  display: inline-flex; align-items: center; gap: 14px; min-height: 56px; border-radius: 999px;
+  padding: 0 28px; font-weight: 700; font-size: 18px; text-decoration: none;
+  transition: transform 0.2s cubic-bezier(.32, .72, 0, 1);
+}
+.play { background: var(--text); color: var(--bg); padding-right: 10px; }
+.play span {
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--violet); color: #fff; font-size: 14px; box-shadow: 0 4px 12px rgba(124, 92, 255, 0.45);
+}
+.ghost { border: 1px solid var(--line); background: rgba(255, 255, 255, 0.045); color: var(--text); }
+.play:active, .ghost:active { transform: scale(0.98); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 4px 0 0; }
+.chips li { border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px; color: var(--soft); font-size: 15px; }
+
+.phone {
+  border-radius: 36px; padding: 7px; max-width: 100%;
+  background: linear-gradient(180deg, #2A2840, #15141F);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px var(--line);
+}
+.phone img { display: block; width: 100%; height: auto; border-radius: 30px; }
+.hero-phone { transform: rotate(2deg); }
+
+.how { display: grid; gap: 24px; }
+.how ol { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+.how li { counter-increment: step; border: 1px solid var(--line); border-radius: 22px; padding: 20px; background: rgba(255, 255, 255, 0.03); color: var(--soft); }
+.how li::before { content: counter(step); display: block; color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 6px; }
+.how strong { color: var(--text); }
+
+.screens { display: grid; gap: 28px; }
+.grid { display: grid; gap: 32px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+figure { margin: 0; display: grid; gap: 14px; align-content: start; min-width: 0; }
+figcaption { display: grid; gap: 4px; }
+figcaption strong { font-family: var(--display), Georgia, serif; font-size: 22px; }
+figcaption span { color: var(--muted); font-size: 15px; }
+
+footer { border-top: 1px solid var(--line); padding-top: 20px; color: var(--muted); font-size: 15px; }
+
+@media (max-width: 760px) {
+  .wrap { gap: 64px; padding-block: 32px 48px; }
+  .hero { grid-template-columns: 1fr; }
+  .hero-phone { max-width: 300px; margin: 0 auto; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .play, .ghost { transition: none; } }
