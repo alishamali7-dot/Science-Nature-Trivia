@@ -7,10 +7,10 @@ const API = 'https://the-trivia-api.com/v2/questions';
 export const TAGS = {
   space: 'space,astronomy,planets,astrophysics,space_exploration',
   animals: 'animals',
-  plants: 'plants,botany',
+  plants: 'plants,botany,trees,flowers,gardening,herbs',
   body: 'anatomy,the_human_body,disease,diseases',
   earth: 'geology,chemistry,chemical_elements,elements,earthquakes,weather,earth',
-  oceans: 'oceans,seas,marine_life,seafaring',
+  oceans: 'oceans,seas,marine_life,seafaring,pacific_ocean,bodies_of_water', // ocean tags alone hold ~22 questions
 };
 
 // Kids get easy and normal only; adults go up to hard.
@@ -24,6 +24,7 @@ const NEAR = { easy: ['easy', 'medium', 'hard'], medium: ['medium', 'easy', 'har
 
 const text = (s) => ({ ar: s, en: s });
 const toQuestion = (x, category, points) => ({
+  id: x.id,
   category,
   points,
   question: text(x.question.text),
@@ -31,16 +32,21 @@ const toQuestion = (x, category, points) => ({
   wrong: x.incorrectAnswers.slice(0, 3).map(text),
 });
 
-// Fills one category's slots (in the order of `builtIn`) from pools by difficulty, never repeating a question.
+// Fills one category's slots (in the order of `builtIn`) from pools by difficulty, never repeating a question
+// within a game. Questions in `seen` (asked in earlier games) are used only once no unseen one is left.
 // pools: { easy: [apiQuestion], medium: [...], hard: [...] }
-export function fillCategory(builtIn, pools, plan) {
+export function fillCategory(builtIn, pools, plan, seen = new Set()) {
   const used = new Set();
   return builtIn.map((slot) => {
-    for (const d of NEAR[plan[slot.points]]) {
-      const x = (pools[d] || []).find((p) => !used.has(p.id) && p.incorrectAnswers.length >= 3);
-      if (x) {
-        used.add(x.id);
-        return toQuestion(x, slot.category, slot.points);
+    for (const fresh of [true, false]) {
+      for (const d of NEAR[plan[slot.points]]) {
+        const x = (pools[d] || []).find(
+          (p) => !used.has(p.id) && (!fresh || !seen.has(p.id)) && p.incorrectAnswers.length >= 3,
+        );
+        if (x) {
+          used.add(x.id);
+          return toQuestion(x, slot.category, slot.points);
+        }
       }
     }
     return slot;
@@ -65,13 +71,13 @@ async function fetchPools(tags, difficulties, kids) {
 }
 
 // A fresh deck in the same shape and order as `builtIn` (the built-in list for this age group).
-export async function loadQuestions(age, builtIn, categories) {
+export async function loadQuestions(age, builtIn, categories, seen) {
   const plan = DIFFICULTY[age];
   const needed = [...new Set(Object.values(plan))];
   const decks = await Promise.all(
     categories.map(async (c) => {
       const pools = await fetchPools(TAGS[c.id], needed, age === 'kids');
-      return fillCategory(builtIn.filter((x) => x.category === c.id), pools, plan);
+      return fillCategory(builtIn.filter((x) => x.category === c.id), pools, plan, seen);
     }),
   );
   return decks.flat();

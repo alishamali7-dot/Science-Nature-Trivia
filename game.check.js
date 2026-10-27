@@ -51,5 +51,8 @@ assert.deepEqual(filled.map((x) => x.points), [200, 200, 400, 400, 600, 600]);
 assert.deepEqual(filled.map((x) => x.question.en).slice(0, 3), ['m1', 'm2', 'm3']); // no easy: borrowed from medium
 assert.deepEqual(filled.slice(3), builtIn.slice(3)); // pools ran dry: built-in questions
 assert.equal(new Set(filled.map((x) => x.question.en)).size, 6);
+// Questions asked in earlier games come last: unseen ones first, seen ones only when nothing else is left.
+const again = fillCategory(builtIn, { easy: [], medium: [api('m1'), api('m2'), api('m3'), api('m4')] }, DIFFICULTY.kids, new Set(['m1', 'm2']));
+assert.deepEqual(again.map((x) => x.question.en).slice(0, 4), ['m3', 'm4', 'm1', 'm2']);
 
 console.log('game rules and question bank OK');

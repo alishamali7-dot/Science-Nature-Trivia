@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BackHandler, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -27,6 +28,7 @@ import { loadQuestions } from './trivia';
 import { TIME, colors, fontFiles, fonts, radius, space } from './theme';
 
 const CALL_BONUS = 30; // seconds added by "call a friend"
+const SEEN_KEY = 'seenQuestions';
 
 const HELPER_ICONS = { fifty: 'half', twoTries: 'repeat', pit: 'pit', call: 'phone' };
 
@@ -68,6 +70,13 @@ function Game() {
   const [gameConfig, setGameConfig] = useState(null); // { mode, age } of the game in progress, so setup can offer "continue"
   const [deck, setDeck] = useState(null); // this game's questions, from the API (built-in where it falls short)
   const [loading, setLoading] = useState(false);
+  // API questions already asked on this phone, kept across games and app restarts so they don't come back.
+  const seen = useRef(new Set());
+  useEffect(() => {
+    AsyncStorage.getItem(SEEN_KEY)
+      .then((s) => s && JSON.parse(s).forEach((id) => seen.current.add(id)))
+      .catch(() => {});
+  }, []);
 
   // Current question
   const [current, setCurrent] = useState(0);
@@ -112,7 +121,7 @@ function Game() {
   const newGame = async () => {
     if (loading) return;
     setLoading(true);
-    const fresh = await loadQuestions(age, QUESTIONS[age], CATEGORIES);
+    const fresh = await loadQuestions(age, QUESTIONS[age], CATEGORIES, seen.current);
     setLoading(false);
     setDeck(fresh);
     setResults({});
@@ -127,6 +136,11 @@ function Game() {
   };
 
   const open = (i) => {
+    const id = questions[i].id;
+    if (id && !seen.current.has(id)) {
+      seen.current.add(id);
+      AsyncStorage.setItem(SEEN_KEY, JSON.stringify([...seen.current])).catch(() => {});
+    }
     setPending({ results, scores, turn, lifelines });
     setCurrent(i);
     setPicked(null);
