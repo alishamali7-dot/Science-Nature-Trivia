@@ -24,6 +24,7 @@ import useLayout from './components/useLayout';
 import { answersOf, fiftyFifty, scoreAnswer, winnerOf } from './game';
 import { CATEGORIES, QUESTIONS } from './questions';
 import { STRINGS, dirFor } from './strings';
+import { loadQuestions } from './trivia';
 import { TIME, colors, fontFiles, fonts, radius, space } from './theme';
 
 const CALL_BONUS = 30; // seconds added by "call a friend"
@@ -64,6 +65,8 @@ function Game() {
   const [history, setHistory] = useState([]); // game snapshots before each answered question, for Undo
   const [pending, setPending] = useState(null); // snapshot taken when the current question opened
   const [gameConfig, setGameConfig] = useState(null); // { mode, age } of the game in progress, so setup can offer "continue"
+  const [deck, setDeck] = useState(null); // this game's questions (English: from the API; Arabic: built-in)
+  const [loading, setLoading] = useState(false);
 
   // Current question
   const [current, setCurrent] = useState(0);
@@ -76,7 +79,7 @@ function Game() {
   const [notice, setNotice] = useState('');
   const [left, setLeft] = useState(TIME.kids);
 
-  const questions = QUESTIONS[age];
+  const questions = deck || QUESTIONS[age];
   const q = questions[current];
   const answered = picked !== null;
 
@@ -105,7 +108,15 @@ function Game() {
   const allDone = doneCount === questions.length;
   const inGame = screen === 'board' || screen === 'question' || screen === 'end';
 
-  const newGame = () => {
+  const newGame = async () => {
+    if (loading) return;
+    let fresh = QUESTIONS[age];
+    if (lang === 'en') {
+      setLoading(true);
+      fresh = await loadQuestions(age, QUESTIONS[age], CATEGORIES);
+      setLoading(false);
+    }
+    setDeck(fresh);
     setResults({});
     setScores(Array(teamCount).fill(0));
     setTurn(0);
@@ -322,10 +333,10 @@ function Game() {
               {canResume ? (
                 <>
                   <PrimaryButton icon="play" label={t.resume} onPress={() => setScreen('board')} dir={dir} />
-                  <PrimaryButton variant="ghost" size={short ? 'sm' : 'md'} icon="restart" label={t.fresh} onPress={newGame} dir={dir} />
+                  <PrimaryButton variant="ghost" size={short ? 'sm' : 'md'} icon="restart" label={loading ? t.loading : t.fresh} onPress={newGame} dir={dir} />
                 </>
               ) : (
-                <PrimaryButton icon="play" label={t.go} onPress={newGame} dir={dir} />
+                <PrimaryButton icon="play" label={loading ? t.loading : t.go} onPress={newGame} dir={dir} />
               )}
             </View>
           </View>

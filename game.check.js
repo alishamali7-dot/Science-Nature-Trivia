@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { answersOf, fiftyFifty, scoreAnswer, winnerOf } from './game.js';
 import { CATEGORIES, QUESTIONS } from './questions.js';
+import { DIFFICULTY, fillCategory } from './trivia.js';
 
 const q = {
   points: 400,
@@ -41,5 +42,14 @@ for (const [age, list] of Object.entries(QUESTIONS)) {
     assert.ok(labels.every(Boolean) && x.question.ar && x.question.en, x.question.en);
   }
 }
+
+// API questions fill the slots by difficulty, borrow from the nearest one, and fall back to built-in.
+const api = (id, d) => ({ id, difficulty: d, question: { text: id }, correctAnswer: 'a', incorrectAnswers: ['b', 'c', 'd'] });
+const builtIn = QUESTIONS.kids.filter((x) => x.category === 'oceans');
+const filled = fillCategory(builtIn, { easy: [], medium: [api('m1'), api('m2'), api('m3')] }, DIFFICULTY.kids);
+assert.deepEqual(filled.map((x) => x.points), [200, 200, 400, 400, 600, 600]);
+assert.deepEqual(filled.map((x) => x.question.en).slice(0, 3), ['m1', 'm2', 'm3']); // no easy: borrowed from medium
+assert.deepEqual(filled.slice(3), builtIn.slice(3)); // pools ran dry: built-in questions
+assert.equal(new Set(filled.map((x) => x.question.en)).size, 6);
 
 console.log('game rules and question bank OK');
