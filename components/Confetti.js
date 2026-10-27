@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Easing, StyleSheet, View } from 'react-native';
 
-const COLORS = ['#B7F34A', '#FFC857', '#3FB6FF', '#FF6B8B', '#8B7CFF', '#2ED47A'];
+const COLORS = ['#A99BFF', '#FFD166', '#5EB8FF', '#FF8FB1', '#3DDC97', '#19C2B0'];
 const { width, height } = Dimensions.get('window');
 
 // ponytail: 40 Animated.Views is plenty for one burst; switch to a canvas lib if we ever need hundreds.

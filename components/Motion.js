@@ -1,11 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
+import { EASE } from '../theme';
+
+const SPRING = Easing.bezier(...EASE);
 
 // Fades and slides children in when they mount. Use `delay` to stagger a list.
-export function FadeIn({ delay = 0, from = 18, style, children }) {
+export function FadeIn({ delay = 0, from = 22, style, children }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.timing(v, { toValue: 1, duration: 420, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    Animated.timing(v, { toValue: 1, duration: 700, delay, easing: SPRING, useNativeDriver: true }).start();
   }, []);
   const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [from, 0] });
   return <Animated.View style={[style, { opacity: v, transform: [{ translateY }] }]}>{children}</Animated.View>;

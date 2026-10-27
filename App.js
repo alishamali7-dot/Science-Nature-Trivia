@@ -3,8 +3,10 @@ import { StatusBar } from 'expo-status-bar';
 import { ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { useFonts } from 'expo-font';
 import AnswerButton from './components/AnswerButton';
+import Backdrop from './components/Backdrop';
 import CategoryCard from './components/CategoryCard';
 import Confetti from './components/Confetti';
+import GameBar from './components/GameBar';
 import Illustration from './components/Illustration';
 import LangToggle from './components/LangToggle';
 import Lifeline from './components/Lifeline';
@@ -24,9 +26,11 @@ const CALL_BONUS = 30; // seconds added by "call a friend"
 // Board layout: two category cards per row.
 const PAIRS = [0, 2, 4].map((i) => CATEGORIES.slice(i, i + 2));
 
+const HELPER_ICONS = { fifty: 'half', twoTries: 'repeat', pit: 'pit', call: 'phone' };
+
 export default function App() {
   const [fontsLoaded] = useFonts(fontFiles);
-  const short = useWindowDimensions().height < 760; // iPhone SE-size screens get a tighter question layout
+  const short = useWindowDimensions().height < 760; // iPhone SE-size screens get a tighter layout
   const [lang, setLang] = useState('ar');
   const [screen, setScreen] = useState('start'); // start | setup | board | question | end
 
@@ -40,6 +44,8 @@ export default function App() {
   const [scores, setScores] = useState([0, 0]);
   const [turn, setTurn] = useState(0);
   const [lifelines, setLifelines] = useState([{}, {}]); // per team: { fifty, twoTries, pit, call }, once each
+  const [history, setHistory] = useState([]); // game snapshots before each answered question, for Undo
+  const [pending, setPending] = useState(null); // snapshot taken when the current question opened
 
   // Current question
   const [current, setCurrent] = useState(0);
@@ -70,17 +76,23 @@ export default function App() {
   const dir = dirFor(lang);
   const teamCount = mode === 'teams' ? 2 : 1;
   const teamNames = mode === 'teams' ? names.map((n, i) => n.trim() || t.defaultTeams[i]) : [t.you];
-  const allDone = Object.keys(results).length === questions.length;
+  const doneCount = Object.keys(results).length;
+  const allDone = doneCount === questions.length;
+  const inGame = screen === 'board' || screen === 'question' || screen === 'end';
 
   const newGame = () => {
     setResults({});
     setScores(Array(teamCount).fill(0));
     setTurn(0);
     setLifelines(Array.from({ length: teamCount }, () => ({})));
+    setHistory([]);
+    setPending(null);
+    setPicked(null);
     setScreen('board');
   };
 
   const open = (i) => {
+    setPending({ results, scores, turn, lifelines });
     setCurrent(i);
     setPicked(null);
     setRemoved([]);
@@ -104,7 +116,22 @@ export default function App() {
     setPicked(answer);
     setResults({ ...results, [current]: { right, team: turn } });
     setScores(scoreAnswer(scores, turn, q, right, pit));
+    setHistory([...history, pending]);
   }
+
+  // Undo: take back the last answered question (its points, helpers and turn) and return to the board.
+  const undo = () => {
+    const last = history[history.length - 1];
+    if (!last) return;
+    setResults(last.results);
+    setScores(last.scores);
+    setTurn(last.turn);
+    setLifelines(last.lifelines);
+    setHistory(history.slice(0, -1));
+    setPending(null);
+    setPicked(null);
+    setScreen('board');
+  };
 
   const takeLifeline = (kind) => {
     setLifelines(lifelines.map((l, i) => (i === turn ? { ...l, [kind]: true } : l)));
@@ -135,7 +162,6 @@ export default function App() {
     return [tiles.filter((_, i) => i % 2 === 0), tiles.filter((_, i) => i % 2 === 1)];
   };
 
-
   const helpers = [
     { kind: 'fifty', label: t.fifty, off: removed.length > 0 },
     { kind: 'twoTries', label: t.twoTries, off: twoTries },
@@ -149,38 +175,53 @@ export default function App() {
     if (right && pit && teamCount > 1) feedback += `\n${t.pitHit(teamNames[other], q.points)}`;
   }
 
+  const eyebrow = (text) => (
+    <View style={styles.eyebrow}>
+      <View style={styles.eyebrowDot} />
+      <Text style={styles.eyebrowText}>{text}</Text>
+    </View>
+  );
+
   return (
     <View style={styles.screen}>
+      <Backdrop />
+
       <View style={[styles.topBar, { flexDirection: dir.row }]}>
         <LangToggle lang={lang} onChange={setLang} />
-        <Text style={styles.brand}>{t.category}</Text>
+        {inGame ? (
+          <GameBar canUndo={history.length > 0} onUndo={undo} onRestart={newGame} t={t} dir={dir} />
+        ) : (
+          eyebrow(t.category)
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {screen === 'start' && (
           <View key={`start-${lang}`} style={styles.fill}>
-            <View style={styles.startTop}>
-            <View style={styles.hero}>
-              <Float amount={10}>
-                <Illustration name="hero" size={short ? 150 : 210} />
-              </Float>
+            <View style={styles.centered}>
+              <View style={styles.hero}>
+                <Float amount={10}>
+                  <Illustration name="hero" size={short ? 150 : 220} />
+                </Float>
+              </View>
+              <FadeIn delay={120}>
+                <Text style={[styles.title, short && styles.titleShort, styles.center]}>{t.title}</Text>
+              </FadeIn>
+              <FadeIn delay={240}>
+                <Text style={[styles.body, styles.center]}>{t.tagline}</Text>
+              </FadeIn>
+              <View style={[styles.artRow, { flexDirection: dir.row }]}>
+                {CATEGORIES.map((c, i) => (
+                  <FadeIn key={c.id} delay={340 + i * 70}>
+                    <View style={[styles.artChip, { backgroundColor: `${c.color}1A`, borderColor: `${c.color}40` }]}>
+                      <Illustration name={c.art} size={36} />
+                    </View>
+                  </FadeIn>
+                ))}
+              </View>
             </View>
-            <FadeIn delay={100}>
-              <Text style={[styles.title, styles.center]}>{t.title}</Text>
-            </FadeIn>
-            <FadeIn delay={220}>
-              <Text style={[styles.body, styles.center]}>{t.tagline}</Text>
-            </FadeIn>
-            <View style={[styles.artRow, { flexDirection: dir.row }]}>
-              {CATEGORIES.map((c, i) => (
-                <FadeIn key={c.id} delay={320 + i * 70}>
-                  <Illustration name={c.art} size={44} />
-                </FadeIn>
-              ))}
-            </View>
-            </View>
-            <FadeIn delay={760}>
-              <PrimaryButton label={t.start} onPress={() => setScreen('setup')} />
+            <FadeIn delay={780}>
+              <PrimaryButton label={t.start} onPress={() => setScreen('setup')} dir={dir} />
             </FadeIn>
           </View>
         )}
@@ -191,7 +232,7 @@ export default function App() {
               <Text style={[styles.h1, short && styles.h1Short, dir.text]}>{t.setup}</Text>
             </FadeIn>
 
-            <FadeIn delay={80} style={styles.section}>
+            <FadeIn delay={80} style={[styles.section, short && styles.sectionShort]}>
               <Text style={[styles.label, dir.text]}>{t.who}</Text>
               <View style={[styles.pair, { flexDirection: dir.row }]}>
                 <OptionCard title={t.solo} selected={mode === 'solo'} onPress={() => setMode('solo')} dir={dir} />
@@ -199,20 +240,20 @@ export default function App() {
               </View>
             </FadeIn>
 
-            <FadeIn delay={160} style={styles.section}>
+            <FadeIn delay={160} style={[styles.section, short && styles.sectionShort]}>
               <Text style={[styles.label, dir.text]}>{t.age}</Text>
               <View style={[styles.pair, { flexDirection: dir.row }]}>
-                <OptionCard art="animals" title={t.kids} hint={t.kidsHint} selected={age === 'kids'} onPress={() => setAge('kids')} dir={dir} />
-                <OptionCard art="space" title={t.adults} hint={t.adultsHint} selected={age === 'adults'} onPress={() => setAge('adults')} dir={dir} />
+                <OptionCard art="animals" compact={short} title={t.kids} hint={t.kidsHint} selected={age === 'kids'} onPress={() => setAge('kids')} dir={dir} />
+                <OptionCard art="space" compact={short} title={t.adults} hint={t.adultsHint} selected={age === 'adults'} onPress={() => setAge('adults')} dir={dir} />
               </View>
             </FadeIn>
 
             {mode === 'teams' && (
-              <FadeIn delay={240} style={styles.section}>
+              <FadeIn delay={240} style={[styles.section, short && styles.sectionShort]}>
                 <Text style={[styles.label, dir.text]}>{t.teamNames}</Text>
                 {names.map((n, i) => (
-                  <View key={i} style={[styles.inputRow, { flexDirection: dir.row, borderColor: colors.teams[i] }]}>
-                    <View style={[styles.turnDot, { backgroundColor: colors.teams[i] }]} />
+                  <View key={i} style={[styles.inputRow, { flexDirection: dir.row }]}>
+                    <View style={[styles.teamDot, { backgroundColor: colors.teams[i] }]} />
                     <TextInput
                       value={n}
                       onChangeText={(v) => setNames(names.map((x, j) => (j === i ? v : x)))}
@@ -228,7 +269,7 @@ export default function App() {
             )}
 
             <View style={styles.bottom}>
-              <PrimaryButton label={t.go} onPress={newGame} />
+              <PrimaryButton label={t.go} onPress={newGame} dir={dir} />
             </View>
           </View>
         )}
@@ -236,6 +277,12 @@ export default function App() {
         {screen === 'board' && (
           <View key={`board-${lang}`} style={styles.fill}>
             <TeamScores names={teamNames} scores={scores} turn={turn} ptsLabel={t.pts} turnLabel={t.yourTurn} dir={dir} />
+            {!short && (
+              <View style={[styles.boardHead, { flexDirection: dir.row }]}>
+                <Text style={[styles.h2, dir.text]}>{t.board}</Text>
+                <Text style={styles.hint}>{t.left(questions.length - doneCount)}</Text>
+              </View>
+            )}
             <View style={styles.board}>
               {PAIRS.map((pair, pi) => (
                 <FadeIn key={pi} delay={pi * 90} style={[styles.pair, { flexDirection: dir.row }]}>
@@ -253,13 +300,13 @@ export default function App() {
             {/* Status line: whose turn + timer while answering, then the result. */}
             {answered ? (
               <FadeIn>
-                <Text style={[styles.feedback, { color: right ? colors.accent : colors.wrong }]}>{feedback}</Text>
+                <Text style={[styles.feedback, { color: right ? colors.right : colors.wrong }]}>{feedback}</Text>
               </FadeIn>
             ) : (
               <View style={[styles.status, { flexDirection: dir.row }]}>
                 {teamCount > 1 && (
-                  <View style={[styles.turn, { flexDirection: dir.row, borderColor: colors.teams[turn] }]}>
-                    <View style={[styles.turnDot, { backgroundColor: colors.teams[turn] }]} />
+                  <View style={[styles.turn, { flexDirection: dir.row, borderColor: `${colors.teams[turn]}66`, backgroundColor: `${colors.teams[turn]}1A` }]}>
+                    <View style={[styles.teamDot, { backgroundColor: colors.teams[turn] }]} />
                     <Text style={[styles.turnText, { color: colors.teams[turn] }]} numberOfLines={1}>{teamNames[turn]}</Text>
                   </View>
                 )}
@@ -285,6 +332,7 @@ export default function App() {
                 <FadeIn key={a.en} delay={120 + i * 70}>
                   <AnswerButton
                     compact={short}
+                    letter={t.letters[i]}
                     label={a[lang]}
                     removed={removed.includes(a)}
                     disabled={answered || tried.includes(a)}
@@ -301,19 +349,21 @@ export default function App() {
             <View style={styles.footer}>
               {answered ? (
                 <FadeIn>
-                  <PrimaryButton variant="light" label={allDone ? t.seeScore : t.next} onPress={next} />
+                  <PrimaryButton label={allDone ? t.seeScore : t.next} onPress={next} dir={dir} />
                 </FadeIn>
               ) : (
                 <View style={[styles.helpers, { flexDirection: dir.row }]}>
                   {helpers.map((h) => (
                     <Lifeline
                       key={h.kind}
+                      icon={HELPER_ICONS[h.kind]}
                       compact={short}
                       label={h.label}
                       used={mine[h.kind]}
                       usedLabel={t.used}
                       disabled={h.off}
                       onPress={() => takeLifeline(h.kind)}
+                      dir={dir}
                     />
                   ))}
                 </View>
@@ -324,38 +374,38 @@ export default function App() {
 
         {screen === 'end' && (
           <View key={`end-${lang}`} style={styles.fill}>
-            <View style={styles.startTop}>
-            <View style={styles.hero}>
-              <Float amount={8}>
-                <Illustration name="hero" size={160} />
-              </Float>
-            </View>
-            <FadeIn delay={100} style={styles.centerBox}>
-              <Text style={styles.hint}>{teamCount > 1 ? t.winner : t.final}</Text>
-              {teamCount > 1 ? (
-                <Text style={[styles.winner, { color: winner === -1 ? colors.gold : colors.teams[winner] }]}>
-                  {winner === -1 ? t.tie : teamNames[winner]}
-                </Text>
-              ) : (
-                <>
-                  <Text style={styles.bigScore}>{scores[0]}</Text>
-                  <Text style={styles.hint}>{t.outOf(maxPoints)}</Text>
-                  <Text style={styles.correctLine}>{t.correctOf(correctCount, questions.length)}</Text>
-                  <Text style={[styles.body, styles.center]}>
-                    {correctCount >= 30 ? t.v5 : correctCount >= 18 ? t.v3 : t.v0}
+            <View style={styles.centered}>
+              <View style={styles.hero}>
+                <Float amount={8}>
+                  <Illustration name="hero" size={short ? 130 : 170} />
+                </Float>
+              </View>
+              <FadeIn delay={100} style={styles.centerBox}>
+                {eyebrow(teamCount > 1 ? t.winner : t.final)}
+                {teamCount > 1 ? (
+                  <Text style={[styles.winner, { color: winner === -1 ? colors.gold : colors.teams[winner] }]}>
+                    {winner === -1 ? t.tie : teamNames[winner]}
                   </Text>
-                </>
-              )}
-            </FadeIn>
-            {teamCount > 1 && (
-              <FadeIn delay={250}>
-                <TeamScores names={teamNames} scores={scores} turn={-1} ptsLabel={t.pts} dir={dir} />
+                ) : (
+                  <>
+                    <Text style={styles.bigScore}>{scores[0]}</Text>
+                    <Text style={styles.hint}>{t.outOf(maxPoints)}</Text>
+                    <Text style={styles.correctLine}>{t.correctOf(correctCount, questions.length)}</Text>
+                    <Text style={[styles.body, styles.center]}>
+                      {correctCount >= 30 ? t.v5 : correctCount >= 18 ? t.v3 : t.v0}
+                    </Text>
+                  </>
+                )}
               </FadeIn>
-            )}
+              {teamCount > 1 && (
+                <FadeIn delay={250}>
+                  <TeamScores names={teamNames} scores={scores} turn={-1} ptsLabel={t.pts} dir={dir} />
+                </FadeIn>
+              )}
             </View>
             <FadeIn delay={400} style={styles.section}>
-              <PrimaryButton label={t.again} onPress={newGame} />
-              <PrimaryButton variant="ghost" label={t.change} onPress={() => setScreen('setup')} />
+              <PrimaryButton label={t.again} icon="restart" onPress={newGame} dir={dir} />
+              <PrimaryButton variant="ghost" label={t.change} onPress={() => setScreen('setup')} dir={dir} />
             </FadeIn>
           </View>
         )}
@@ -369,40 +419,53 @@ export default function App() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg, paddingTop: 54, paddingHorizontal: 16 },
-  scroll: { flexGrow: 1, paddingTop: 14, paddingBottom: 28 },
-  topBar: { justifyContent: 'space-between', alignItems: 'center' },
-  brand: { color: colors.muted, fontSize: 14, fontFamily: fonts.medium },
+  scroll: { flexGrow: 1, paddingTop: 16, paddingBottom: 28 },
+  topBar: { justifyContent: 'space-between', alignItems: 'center', minHeight: 46 },
+  eyebrow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5,
+    backgroundColor: colors.shell, borderWidth: 1, borderColor: colors.hairline,
+  },
+  eyebrowDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent },
+  eyebrowText: { color: colors.soft, fontSize: 13, lineHeight: 20, fontFamily: fonts.medium },
   fill: { flex: 1, gap: 14 },
+  fillShort: { gap: 8 },
+  centered: { flex: 1, justifyContent: 'center', gap: 16 },
   bottom: { marginTop: 'auto' },
   section: { gap: 10 },
   pair: { gap: 8 },
   center: { textAlign: 'center' },
-  centerBox: { alignItems: 'center', gap: 4 },
+  centerBox: { alignItems: 'center', gap: 6 },
   hero: { alignItems: 'center' },
-  startTop: { flex: 1, justifyContent: 'center', gap: 14 },
   artRow: { justifyContent: 'center', flexWrap: 'wrap', gap: 8 },
-  title: { color: colors.text, fontSize: 44, lineHeight: 70, fontFamily: fonts.display },
-  h1: { color: colors.text, fontSize: 30, lineHeight: 48, fontFamily: fonts.display },
-  label: { color: colors.soft, fontSize: 16, lineHeight: 24, fontFamily: fonts.bold },
-  body: { color: colors.soft, fontSize: 17, lineHeight: 28, fontFamily: fonts.regular },
-  hint: { color: colors.muted, fontSize: 15, lineHeight: 24, fontFamily: fonts.medium },
-  fillShort: { gap: 8 },
+  artChip: { borderRadius: 999, borderWidth: 1, padding: 4 },
+  title: { color: colors.text, fontSize: 48, lineHeight: 76, fontFamily: fonts.display },
+  h1: { color: colors.text, fontSize: 32, lineHeight: 50, fontFamily: fonts.display },
   h1Short: { fontSize: 26, lineHeight: 40 },
+  titleShort: { fontSize: 40, lineHeight: 62 },
+  sectionShort: { gap: 6 },
+  h2: { color: colors.text, fontSize: 20, lineHeight: 32, fontFamily: fonts.displayBold },
+  label: { color: colors.muted, fontSize: 14, lineHeight: 22, fontFamily: fonts.bold },
+  body: { color: colors.soft, fontSize: 17, lineHeight: 28, fontFamily: fonts.regular },
+  hint: { color: colors.muted, fontSize: 14, lineHeight: 22, fontFamily: fonts.medium },
+  inputRow: {
+    alignItems: 'center', gap: 10, borderRadius: 999, paddingHorizontal: 18,
+    backgroundColor: colors.core, borderWidth: 1, borderColor: colors.hairline, borderTopColor: colors.highlight,
+  },
+  input: { flex: 1, minHeight: 54, color: colors.text, fontSize: 17, fontFamily: fonts.bold },
   inputShort: { minHeight: 44 },
-  status: { alignItems: 'center', gap: 10, minHeight: 40 },
-  timer: { flex: 1 },
-  answersShort: { gap: 8 },
-  inputRow: { alignItems: 'center', gap: 10, borderWidth: 2, borderRadius: 16, paddingHorizontal: 14, backgroundColor: colors.card },
-  input: { flex: 1, minHeight: 52, color: colors.text, fontSize: 17, fontFamily: fonts.bold },
-  turn: { maxWidth: '45%', alignItems: 'center', gap: 8, borderWidth: 2, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 12, backgroundColor: colors.card },
-  turnDot: { width: 12, height: 12, borderRadius: 6 },
-  turnText: { flexShrink: 1, fontSize: 15, lineHeight: 24, fontFamily: fonts.bold },
+  teamDot: { width: 10, height: 10, borderRadius: 5 },
+  boardHead: { justifyContent: 'space-between', alignItems: 'center' },
   board: { gap: 8 },
+  status: { alignItems: 'center', gap: 10, minHeight: 40 },
+  turn: { maxWidth: '45%', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 12 },
+  turnText: { flexShrink: 1, fontSize: 15, lineHeight: 24, fontFamily: fonts.bold },
+  timer: { flex: 1 },
   answers: { gap: 10 },
+  answersShort: { gap: 8 },
   helpers: { flexWrap: 'wrap', gap: 8 },
   footer: { marginTop: 'auto' },
   feedback: { minHeight: 40, fontSize: 18, lineHeight: 28, fontFamily: fonts.black, textAlign: 'center', textAlignVertical: 'center' },
-  winner: { fontSize: 42, lineHeight: 68, fontFamily: fonts.display, textAlign: 'center' },
-  bigScore: { color: colors.accent, fontSize: 80, lineHeight: 104, fontFamily: fonts.black },
+  winner: { fontSize: 46, lineHeight: 74, fontFamily: fonts.display, textAlign: 'center' },
+  bigScore: { color: colors.text, fontSize: 80, lineHeight: 104, fontFamily: fonts.black },
   correctLine: { color: colors.text, fontSize: 20, lineHeight: 32, fontFamily: fonts.bold, marginTop: 6 },
 });

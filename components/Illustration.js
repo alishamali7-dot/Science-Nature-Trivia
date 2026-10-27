@@ -74,7 +74,7 @@ const ART = {
   ),
   hero: () => (
     <G>
-      <Circle cx="50" cy="50" r="48" fill="#141C33" />
+      <Circle cx="50" cy="50" r="48" fill="#16142B" />
       <Star x={18} y={24} r={2} /><Star x={84} y={18} r={2.4} /><Star x={88} y={66} r={1.6} /><Star x={14} y={72} r={1.5} />
       <Ellipse cx="50" cy="50" rx="40" ry="14" fill="none" stroke="#3FB6FF" strokeWidth="2" opacity="0.7" transform="rotate(30 50 50)" />
       <Ellipse cx="50" cy="50" rx="40" ry="14" fill="none" stroke="#FF6B8B" strokeWidth="2" opacity="0.7" transform="rotate(-30 50 50)" />
