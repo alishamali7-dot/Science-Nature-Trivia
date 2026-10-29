@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { answersOf, fiftyFifty, scoreAnswer, winnerOf } from './game.js';
 import { CATEGORIES, QUESTIONS } from './questions.js';
-import { DIFFICULTY, fillCategory, loadQuestions } from './trivia.js';
+import { DIFFICULTY, arabicItems, arabicSlot, fillCategory, loadArabic, loadQuestions } from './trivia.js';
 
 const q = {
   points: 400,
@@ -76,5 +76,37 @@ assert.equal((await fail(reply(500))).kind, 'network');
 assert.equal((await fail(async () => { throw new TypeError('offline'); })).kind, 'network');
 assert.equal((await fail(reply(200, []))).kind, 'empty');
 assert.equal(await fail(reply(200, [api('x1', 'easy'), api('x2', 'medium')])), null); // some questions: plays
+
+// Arabic: API questions go out to translate, empty slots go out to be written, replies come back as questions.
+const half = [api('t1', 'easy'), api('t2', 'medium')];
+const arDeck = fillCategory(builtIn, { easy: half.slice(0, 1), medium: half.slice(1) }, DIFFICULTY.kids, new Set(), false);
+assert.equal(arDeck.filter((x) => x.id).length, 2); // no reuse: the other 4 slots stay empty for the AI
+const items = arabicItems(arDeck, 'kids', CATEGORIES);
+assert.deepEqual(items.map((x) => x.mode), ['translate', 'translate', 'write', 'write', 'write', 'write']);
+assert.deepEqual(items.slice(2).map((x) => x.difficulty), ['medium', 'medium', 'medium', 'medium']);
+assert.equal(items[2].category, 'Oceans');
+const arReply = { question: 'سؤال؟', correct: 'أ', wrong: ['ب', 'ج', 'د'] };
+const tr = arabicSlot(arDeck[0], items[0], arReply);
+assert.equal(tr.id, 't1');
+assert.deepEqual(tr.question, { ar: 'سؤال؟', en: 't1' }); // English kept for the English answer order
+assert.equal(arabicSlot(arDeck[2], items[2], arReply).id, 'ai:oceans:سؤال؟');
+assert.equal(arabicSlot(arDeck[2], items[2], null), null);
+
+// loadArabic: one batch failing still plays (built-in fills its slots); all failing shows the error screen.
+const triviaReply = reply200 => async (url, opts) => (String(url).includes('the-trivia-api')
+  ? { status: 200, ok: true, json: async () => [api('x1', 'easy'), api('x2', 'medium')], headers: { get: () => null } }
+  : reply200(JSON.parse(opts.body)));
+globalThis.fetch = triviaReply(() => ({ status: 429, ok: false, headers: { get: () => '7' } }));
+err = await loadArabic('kids', QUESTIONS.kids, CATEGORIES, new Set()).catch((e) => e);
+assert.equal(err.kind, 'rate');
+assert.equal(err.wait, 7);
+let call = 0;
+globalThis.fetch = triviaReply((body) => (call++ === 0
+  ? { status: 502, ok: false, headers: { get: () => null } }
+  : { status: 200, ok: true, json: async () => ({ items: Object.fromEntries(body.items.map((x) => [x.id, { question: `${x.id}؟`, correct: 'أ', wrong: ['ب', 'ج', 'د'] }])) }) }));
+const arabic = await loadArabic('kids', QUESTIONS.kids, CATEGORIES, new Set());
+assert.equal(arabic.length, 36);
+assert.equal(arabic.filter((x, i) => x === QUESTIONS.kids[i]).length, 12); // the failed batch: 2 categories built-in
+assert.ok(arabic.every((x) => x.question.ar));
 
 console.log('game rules and question bank OK');

@@ -24,7 +24,8 @@ import useLayout from './components/useLayout';
 import { answersOf, fiftyFifty, scoreAnswer, winnerOf } from './game';
 import { CATEGORIES, QUESTIONS } from './questions';
 import { STRINGS, dirFor } from './strings';
-import { loadQuestions } from './trivia';
+import { loadArabic, loadQuestions } from './trivia';
+import LangToggle from './components/LangToggle';
 import { TIME, colors, fontFiles, fonts, radius, space } from './theme';
 
 const CALL_BONUS = 30; // seconds added by "call a friend"
@@ -50,9 +51,8 @@ function Game() {
   // Bottom safe zone, the same on every screen: the main button always rests here, clear of the
   // home indicator / screen edge with breathing room (a little less on short phones).
   const bottomSafe = Math.max(insets.bottom, space.lg) + (short ? space.lg : space.xl);
-  // English only for now: no API serves Arabic questions. The Arabic strings and questions stay for later;
-  // to bring Arabic back, make this state again and restore the LangToggle in the top bar.
-  const lang = 'en';
+  // English questions come from The Trivia API; Arabic ones are adapted or written by AI (see loadArabic).
+  const [lang, setLang] = useState('ar');
   const [screen, setScreen] = useState('start'); // start | setup | board | question | end
 
   // Setup
@@ -135,7 +135,9 @@ function Game() {
     setLoadError(null);
     setScreen('loading');
     try {
-      const fresh = await loadQuestions(age, QUESTIONS[age], CATEGORIES, seen.current);
+      const fresh = lang === 'ar'
+        ? await loadArabic(age, QUESTIONS[age], CATEGORIES, seen.current)
+        : await loadQuestions(age, QUESTIONS[age], CATEGORIES, seen.current);
       if (load === loadId.current) startGame(fresh);
     } catch (e) {
       if (load !== loadId.current) return;
@@ -153,7 +155,7 @@ function Game() {
     setHistory([]);
     setPending(null);
     setPicked(null);
-    setGameConfig({ mode, age });
+    setGameConfig({ mode, age, lang });
     setScreen('board');
   };
 
@@ -241,7 +243,8 @@ function Game() {
   backRef.current = goBack;
 
   // A game in progress can be continued from setup, as long as players and age group are unchanged.
-  const canResume = gameConfig && gameConfig.mode === mode && gameConfig.age === age;
+  // The questions are in one language, so switching language starts a new game instead.
+  const canResume = gameConfig && gameConfig.mode === mode && gameConfig.age === age && gameConfig.lang === lang;
 
   const right = picked === q.correct;
   const winner = winnerOf(scores);
@@ -282,6 +285,8 @@ function Game() {
       <View style={[styles.topBar, col(screen === 'board'), { flexDirection: dir.row }]}>
         <View style={[styles.topStart, { flexDirection: dir.row }]}>
           {screen !== 'start' && <BackButton onPress={goBack} label={t.back} dir={dir} />}
+          {/* During a game the bar holds undo/restart; language is changed from start or setup. */}
+          {(screen === 'start' || screen === 'setup') && <LangToggle lang={lang} onChange={setLang} />}
         </View>
         {inGame ? (
           <GameBar canUndo={history.length > 0} onUndo={undo} onRestart={newGame} t={t} dir={dir} />
