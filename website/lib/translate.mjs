@@ -52,7 +52,51 @@ export class AiError extends Error {
 // items: [{ id, mode: 'translate', question, correct, wrong } | { id, mode: 'write', category, difficulty }]
 // Returns { [id]: { question, correct, wrong } | null } (null: skipped or malformed).
 export async function arabicQuestions({ items, audience, avoid = [] }, key, fetchImpl = fetch) {
-  const input = JSON.stringify({ audience, avoid, items });
+  const content = await ask(SYSTEM, JSON.stringify({ audience, avoid, items }), key, fetchImpl);
+  return parseItems(content, items);
+}
+
+const CATEGORY_SYSTEM = `You write questions for a family quiz show that children play. A player typed a topic for their own category.
+
+Almost every topic is fine: animals (including predators and dinosaurs), nature, space, science, history, geography,
+sports, food, countries, cars, games, cartoons, famous people. Refuse ONLY a topic that is clearly about alcohol or an
+alcoholic drink brand, drugs, smoking, gambling, sexual content, weapons or war crimes, or hatred of a group, or that
+is not a topic at all (random letters). In that case reply exactly {"refused":true} and nothing else.
+
+Otherwise write the questions in the requested language ("ar" = clear Modern Standard Arabic with Arabic punctuation ؟ ، ;
+"en" = plain English), one question per item, at each item's difficulty
+(easy = everyday knowledge, medium = school level, hard = a specialist fact).
+
+Rules:
+- Only well-established facts that reference books agree on; never invent numbers, dates or names.
+- No yes/no questions, no opinion or "usually in cartoons/films" questions: each has one clearly right answer.
+- Every question is about a different fact. Exactly 3 wrong answers, believable but clearly wrong. All four answers different.
+- Answers are a word or a short phrase, never a sentence, no final period. Western digits (1, 2, 3).
+- Audience "kids": simple words a 9-year-old understands.
+- Also give "name": the topic as a short, nicely written category title in the requested language (1 to 3 words).
+
+Reply with JSON only, no markdown:
+{"name":"…","items":[{"id":"…","question":"…","correct":"…","wrong":["…","…","…"]}]} with the same ids, one entry per item.`;
+
+// The model doesn't always refuse on its own (it happily wrote "beer brands"), so obvious topics are
+// blocked before asking it. ponytail: a word list, catches the obvious only; the prompt covers the rest.
+const UNFIT = /\b(beer|wine|vodka|whisk(e)?y|alcohol|liquor|cocktail|brewer|drunk|cigar|smok|vape|drug|cocaine|heroin|weed|marijuana|cannabis|gambl|casino|betting|poker|porn|sex|nude|naked|weapon|guns?\b|rifle|bomb|murder|terror|nazi)/i;
+const UNFIT_AR = /(بيرة|بيره|خمر|خمور|نبيذ|كحول|فودكا|ويسكي|تدخين|سجائر|مخدر|حشيش|كوكايين|قمار|مراهن|كازينو|إباحي|اباحي|جنس|سلاح|أسلحة|قنبل|قتل|إرهاب|ارهاب)/;
+export const unfitTopic = (topic) => UNFIT.test(topic) || UNFIT_AR.test(topic);
+
+// A player's own category: 6 new questions on `topic` in `lang`. Returns { name, items: { [id]: question | null } },
+// or { refused: true } when the topic isn't fit for a family game.
+export async function writeCategory({ topic, lang, audience, items }, key, fetchImpl = fetch) {
+  if (unfitTopic(topic)) return { refused: true };
+  const content = await ask(CATEGORY_SYSTEM, JSON.stringify({ topic, lang, audience, items }), key, fetchImpl);
+  const reply = JSON.parse(content.slice(content.indexOf('{'), content.lastIndexOf('}') + 1));
+  if (reply.refused) return { refused: true };
+  const name = typeof reply.name === 'string' && reply.name.trim().length <= 40 ? reply.name.trim() : topic;
+  return { name, items: parseItems(content, items) };
+}
+
+// One chat request, trying each free model until one answers. Returns the reply text.
+async function ask(system, input, key, fetchImpl) {
   let busy = false;
   for (const model of MODELS) {
     try {
@@ -69,7 +113,7 @@ export async function arabicQuestions({ items, audience, avoid = [] }, key, fetc
           temperature: 0.4,
           reasoning: { enabled: false }, // thinking makes free models 3x slower and adds nothing here
           response_format: { type: 'json_object' },
-          messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: input }],
+          messages: [{ role: 'system', content: system }, { role: 'user', content: input }],
         }),
       });
       if (res.status === 429) {
@@ -78,7 +122,9 @@ export async function arabicQuestions({ items, audience, avoid = [] }, key, fetc
       }
       if (!res.ok) continue;
       const data = await res.json();
-      return parseItems(data.choices?.[0]?.message?.content || '', items);
+      const text = data.choices?.[0]?.message?.content || '';
+      JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)); // not JSON: try the next model
+      return text;
     } catch {
       // a bad reply or network error: try the next model
     }

@@ -103,6 +103,75 @@ export async function loadQuestions(age, builtIn, categories, seen, reuseSeen = 
   return deck;
 }
 
+// ——— The player's own category ———
+// After Start, a player can type any topic; the website's /api/category route has a free AI model write
+// questions on it in the game's language, and it joins the board as a 7th category.
+export const CATEGORY_API = 'https://science-challenge-psi.vercel.app/api/category';
+const SLOTS = [200, 200, 400, 400, 600, 600];
+const SPARES = { kids: ['easy', 'medium'], adults: ['medium', 'hard'] }; // in case some fail the quality check
+
+export const customCategoryOf = (name) => ({ id: 'custom', art: 'hero', color: '#FFD166', name: { ar: name, en: name } });
+
+// Picks 6 questions for the board slots from the AI's replies: the same difficulty first, then any spare.
+// requests: [{ id, difficulty }], replies: { [id]: { question, correct, wrong } | null }. Null if fewer than 6 came back.
+export function pickCustom(requests, replies, plan) {
+  const used = new Set();
+  const take = (ok) => requests.find((r) => !used.has(r.id) && replies[r.id] && ok(r));
+  const picked = SLOTS.map((points) => {
+    const r = take((x) => x.difficulty === plan[points]) || take(() => true);
+    if (r) used.add(r.id);
+    return r && { points, ...replies[r.id] };
+  });
+  if (picked.some((x) => !x)) return null;
+  const text = (s) => ({ ar: s, en: s });
+  return picked.map((x) => ({
+    id: `custom:${x.question}`,
+    category: 'custom',
+    points: x.points,
+    question: text(x.question),
+    correct: text(x.correct),
+    wrong: x.wrong.map(text),
+  }));
+}
+
+// Returns { category, questions }. Throws a LoadError: 'refused' (topic not fit for a family game),
+// 'short' (the AI couldn't write enough good questions), 'rate' or 'network'.
+export async function loadCustomCategory(topic, lang, age, endpoint = CATEGORY_API) {
+  try {
+    return await writeCustom(topic, lang, age, endpoint);
+  } catch (e) {
+    if (e.kind !== 'short') throw e;
+    return writeCustom(topic, lang, age, endpoint); // free models vary; one more try before giving up
+  }
+}
+
+async function writeCustom(topic, lang, age, endpoint) {
+  const plan = DIFFICULTY[age];
+  const requests = [...SLOTS.map((p) => plan[p]), ...SPARES[age]].map((difficulty, i) => ({ id: `c${i}`, difficulty }));
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 90000);
+  let res;
+  try {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic, lang, audience: age, items: requests }),
+      signal: ctrl.signal,
+    });
+  } catch {
+    throw new LoadError('network');
+  } finally {
+    clearTimeout(timer);
+  }
+  if (res.status === 429) throw new LoadError('rate', Number(res.headers.get('retry-after')) || 20);
+  if (!res.ok) throw new LoadError('network');
+  const body = await res.json();
+  if (body.refused) throw new LoadError('refused');
+  const questions = pickCustom(requests, body.items || {}, plan);
+  if (!questions) throw new LoadError('short');
+  return { category: customCategoryOf(body.name || topic), questions };
+}
+
 // ——— Arabic games ———
 // The website's /api/arabic route (it holds the OpenRouter key) has a free AI model adapt each English
 // question into Arabic like a teacher would, and write a brand-new question for any slot the trivia API

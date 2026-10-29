@@ -24,7 +24,7 @@ import useLayout from './components/useLayout';
 import { answersOf, fiftyFifty, scoreAnswer, winnerOf } from './game';
 import { CATEGORIES, QUESTIONS } from './questions';
 import { STRINGS, dirFor } from './strings';
-import { loadArabic, loadQuestions } from './trivia';
+import { loadArabic, loadCustomCategory, loadQuestions } from './trivia';
 import LangToggle from './components/LangToggle';
 import { TIME, colors, fontFiles, fonts, radius, space } from './theme';
 
@@ -34,7 +34,7 @@ const SEEN_KEY = 'seenQuestions';
 const HELPER_ICONS = { fifty: 'half', twoTries: 'repeat', pit: 'pit', call: 'phone' };
 
 // Board rows of `n` category cards each, for any number of categories.
-const rowsOf = (n) => CATEGORIES.filter((_, i) => i % n === 0).map((_, r) => CATEGORIES.slice(r * n, r * n + n));
+const rowsOf = (list, n) => list.filter((_, i) => i % n === 0).map((_, r) => list.slice(r * n, r * n + n));
 
 export default function App() {
   return (
@@ -72,6 +72,11 @@ function Game() {
   const [loadError, setLoadError] = useState(null); // { kind: 'rate' | 'network' | 'empty', wait }
   const [retryIn, setRetryIn] = useState(0); // seconds until the automatic retry after "too many requests"
   const loadId = useRef(0);
+  // The player's own category (asked after Start): { category, questions } once the AI has written it.
+  const [custom, setCustom] = useState(null);
+  const [topic, setTopic] = useState('');
+  const [customState, setCustomState] = useState({ status: 'idle' }); // idle | working | error (+ kind)
+  const customId = useRef(0);
   // API questions already asked on this phone, kept across games and app restarts so they don't come back.
   const seen = useRef(new Set());
   useEffect(() => {
@@ -92,6 +97,7 @@ function Game() {
   const [left, setLeft] = useState(TIME.kids);
 
   const questions = deck || QUESTIONS[age];
+  const categories = custom && deck?.some((x) => x.category === 'custom') ? [...CATEGORIES, custom.category] : CATEGORIES;
   const q = questions[current];
   const answered = picked !== null;
 
@@ -130,7 +136,8 @@ function Game() {
 
   // Load a fresh deck on the loading screen, which shows progress, a problem, or "no questions found".
   // Leaving that screen (Back) drops a load still on its way.
-  async function newGame() {
+  // `withCustom` is the player's own category to add ({ category, questions }), or null for none.
+  async function newGame(withCustom = custom) {
     const load = ++loadId.current;
     setLoadError(null);
     setScreen('loading');
@@ -138,7 +145,7 @@ function Game() {
       const fresh = lang === 'ar'
         ? await loadArabic(age, QUESTIONS[age], CATEGORIES, seen.current)
         : await loadQuestions(age, QUESTIONS[age], CATEGORIES, seen.current);
-      if (load === loadId.current) startGame(fresh);
+      if (load === loadId.current) startGame(fresh, withCustom);
     } catch (e) {
       if (load !== loadId.current) return;
       setLoadError({ kind: e.kind || 'network', wait: e.wait || 0 });
@@ -146,8 +153,33 @@ function Game() {
     }
   }
 
-  const startGame = (fresh) => {
-    setDeck(fresh);
+  // "Your own category?" step: Add has the AI write it, then the game loads; Skip plays the usual 6.
+  async function addCustom() {
+    const id = ++customId.current;
+    setCustomState({ status: 'working' });
+    try {
+      const made = await loadCustomCategory(topic.trim(), lang, age);
+      if (id !== customId.current) return;
+      setCustomState({ status: 'idle' });
+      setCustom(made);
+      newGame(made);
+    } catch (e) {
+      if (id === customId.current) setCustomState({ status: 'error', kind: e.kind || 'network' });
+    }
+  }
+  const skipCustom = () => {
+    customId.current += 1;
+    setCustomState({ status: 'idle' });
+    setCustom(null);
+    newGame(null);
+  };
+  const askCustom = () => {
+    setCustomState({ status: 'idle' });
+    setScreen('custom');
+  };
+
+  const startGame = (fresh, withCustom = null) => {
+    setDeck(withCustom ? [...fresh, ...withCustom.questions] : fresh);
     setResults({});
     setScores(Array(teamCount).fill(0));
     setTurn(0);
@@ -227,7 +259,11 @@ function Game() {
   const goBack = () => {
     if (screen === 'setup') setScreen('start');
     else if (screen === 'board') setScreen('setup');
-    else if (screen === 'loading') {
+    else if (screen === 'custom') {
+      customId.current += 1; // drop a category still being written
+      setCustomState({ status: 'idle' });
+      setScreen('setup');
+    } else if (screen === 'loading') {
       loadId.current += 1; // drop the load still on its way
       setScreen('setup');
     }
@@ -289,7 +325,7 @@ function Game() {
           {(screen === 'start' || screen === 'setup') && <LangToggle lang={lang} onChange={setLang} />}
         </View>
         {inGame ? (
-          <GameBar canUndo={history.length > 0} onUndo={undo} onRestart={newGame} t={t} dir={dir} />
+          <GameBar canUndo={history.length > 0} onUndo={undo} onRestart={() => newGame()} t={t} dir={dir} />
         ) : (
           <Txt variant="caption" color="muted">{t.category}</Txt>
         )}
@@ -374,11 +410,59 @@ function Game() {
               {canResume ? (
                 <>
                   <PrimaryButton icon="play" label={t.resume} onPress={() => setScreen('board')} dir={dir} />
-                  <PrimaryButton variant="ghost" size={short ? 'sm' : 'md'} icon="restart" label={t.fresh} onPress={newGame} dir={dir} />
+                  <PrimaryButton variant="ghost" size={short ? 'sm' : 'md'} icon="restart" label={t.fresh} onPress={askCustom} dir={dir} />
                 </>
               ) : (
-                <PrimaryButton icon="play" label={t.go} onPress={newGame} dir={dir} />
+                <PrimaryButton icon="play" label={t.go} onPress={askCustom} dir={dir} />
               )}
+            </View>
+          </View>
+        )}
+
+        {screen === 'custom' && (
+          <View key={`custom-${lang}`} style={[styles.fill, col()]}>
+            <View style={styles.centered}>
+              <View style={styles.hero}>
+                <Float amount={8}>
+                  <Illustration name="hero" size={short ? 110 : wide ? 200 : 150} />
+                </Float>
+              </View>
+              <View style={styles.headBlock}>
+                <Txt variant={short ? 'heading' : 'title'} style={styles.center} accessibilityRole="header">{t.customTitle}</Txt>
+                <Txt color="soft" style={styles.center}>{t.customBody}</Txt>
+              </View>
+              <View style={[styles.inputRow, { flexDirection: dir.row }]}>
+                <View style={[styles.teamDot, { backgroundColor: colors.gold }]} />
+                <TextInput
+                  value={topic}
+                  onChangeText={(v) => { setTopic(v); if (customState.status === 'error') setCustomState({ status: 'idle' }); }}
+                  placeholder={t.customPlaceholder}
+                  placeholderTextColor={colors.muted}
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
+                  keyboardAppearance="dark"
+                  returnKeyType="go"
+                  onSubmitEditing={() => topic.trim().length >= 2 && customState.status !== 'working' && addCustom()}
+                  editable={customState.status !== 'working'}
+                  maxLength={40}
+                  style={[styles.input, short && styles.inputShort, dir.text]}
+                  accessibilityLabel={t.customTitle}
+                />
+              </View>
+              <View style={styles.customStatus} accessibilityLiveRegion="polite">
+                {customState.status === 'working' && <ActivityIndicator color={colors.accent} />}
+                {customState.status === 'working' && <Txt color="soft" style={styles.center}>{t.customWorking}</Txt>}
+                {customState.status === 'error' && <Txt color="wrong" style={styles.center}>{t[`custom_${customState.kind}`] || t.custom_network}</Txt>}
+              </View>
+            </View>
+            <View style={styles.section}>
+              <PrimaryButton
+                icon="play"
+                label={t.customAdd}
+                onPress={() => topic.trim().length >= 2 && customState.status !== 'working' && addCustom()}
+                dir={dir}
+              />
+              <PrimaryButton variant="ghost" size={short ? 'sm' : 'md'} label={t.customSkip} onPress={skipCustom} dir={dir} />
             </View>
           </View>
         )}
@@ -402,7 +486,7 @@ function Game() {
               {(!loadError || loadError.kind === 'rate') && <ActivityIndicator color={colors.accent} size="large" />}
             </View>
             {loadError?.kind === 'network' && (
-              <PrimaryButton icon="restart" label={t.retry} onPress={newGame} dir={dir} />
+              <PrimaryButton icon="restart" label={t.retry} onPress={() => newGame()} dir={dir} />
             )}
             {loadError?.kind === 'empty' && (
               <View style={styles.section}>
@@ -423,7 +507,7 @@ function Game() {
               </View>
             )}
             <FadeIn style={styles.board}>
-              {rowsOf(boardColumns).map((row, ri) => (
+              {rowsOf(categories, boardColumns).map((row, ri) => (
                 <View key={ri} style={[styles.pair, { flexDirection: dir.row }]}>
                   {row.map((c) => (
                     <CategoryCard key={c.id} category={c} sides={sidesOf(c)} lang={lang} teamColors={colors.teams} />
@@ -468,7 +552,7 @@ function Game() {
               </View>
             )}
             <QuestionCard
-              category={CATEGORIES.find((c) => c.id === q.category)}
+              category={categories.find((c) => c.id === q.category)}
               question={q.question[lang]}
               points={q.points}
               ptsLabel={t.pts}
@@ -550,7 +634,7 @@ function Game() {
               {teamCount > 1 && <TeamScores names={teamNames} scores={scores} turn={-1} ptsLabel={t.pts} dir={dir} />}
             </View>
             <View style={styles.section}>
-              <PrimaryButton label={t.again} icon="restart" onPress={newGame} dir={dir} />
+              <PrimaryButton label={t.again} icon="restart" onPress={askCustom} dir={dir} />
               <PrimaryButton variant="ghost" label={t.change} onPress={() => setScreen('setup')} dir={dir} />
             </View>
           </View>
@@ -572,6 +656,7 @@ const styles = StyleSheet.create({
   fillShort: { gap: 6 },
   centered: { flex: 1, justifyContent: 'center', gap: space.lg },
   headBlock: { gap: space.sm },
+  customStatus: { minHeight: 56, alignItems: 'center', justifyContent: 'center', gap: space.xs },
   bottom: { marginTop: 'auto' },
   section: { gap: 10 },
   sectionShort: { gap: 6 },

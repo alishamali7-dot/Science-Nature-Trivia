@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { answersOf, fiftyFifty, scoreAnswer, winnerOf } from './game.js';
 import { CATEGORIES, QUESTIONS } from './questions.js';
-import { DIFFICULTY, arabicItems, arabicSlot, fillCategory, loadArabic, loadQuestions } from './trivia.js';
+import { DIFFICULTY, arabicItems, arabicSlot, fillCategory, loadArabic, loadCustomCategory, loadQuestions, pickCustom } from './trivia.js';
 
 const q = {
   points: 400,
@@ -108,5 +108,28 @@ const arabic = await loadArabic('kids', QUESTIONS.kids, CATEGORIES, new Set());
 assert.equal(arabic.length, 36);
 assert.equal(arabic.filter((x, i) => x === QUESTIONS.kids[i]).length, 12); // the failed batch: 2 categories built-in
 assert.ok(arabic.every((x) => x.question.ar));
+
+// The player's own category: 6 slots from 8 requests (2 spares), same difficulty first, spares fill gaps.
+const reqs = ['easy', 'easy', 'medium', 'medium', 'medium', 'medium', 'easy', 'medium'].map((difficulty, i) => ({ id: 'c' + i, difficulty }));
+const q8 = (n) => ({ question: 'Q' + n + '?', correct: 'a', wrong: ['b', 'c', 'd'] });
+const all8 = Object.fromEntries(reqs.map((r, i) => [r.id, q8(i)]));
+const six = pickCustom(reqs, all8, DIFFICULTY.kids);
+assert.deepEqual(six.map((x) => x.points), [200, 200, 400, 400, 600, 600]);
+assert.deepEqual(six.map((x) => x.question.en), ['Q0?', 'Q1?', 'Q2?', 'Q3?', 'Q4?', 'Q5?']);
+assert.ok(six.every((x) => x.category === 'custom' && x.id === 'custom:' + x.question.en));
+const gap = pickCustom(reqs, { ...all8, c1: null }, DIFFICULTY.kids); // an easy one failed: the easy spare fills it
+assert.equal(gap[1].question.en, 'Q6?');
+assert.equal(pickCustom(reqs, { ...all8, c0: null, c1: null, c6: null, c7: null }, DIFFICULTY.kids), null); // too few
+
+const catReply = (status, body) => async () => ({ status, ok: status === 200, json: async () => body, headers: { get: () => null } });
+globalThis.fetch = catReply(200, { refused: true });
+assert.equal((await loadCustomCategory('beer', 'en', 'adults').catch((e) => e)).kind, 'refused');
+globalThis.fetch = catReply(200, { name: 'Dinos', items: { c0: q8(0) } });
+assert.equal((await loadCustomCategory('dinos', 'en', 'kids').catch((e) => e)).kind, 'short');
+globalThis.fetch = catReply(200, { name: 'الديناصورات', items: all8 });
+const made = await loadCustomCategory('الديناصورات', 'ar', 'kids');
+assert.equal(made.category.id, 'custom');
+assert.equal(made.category.name.ar, 'الديناصورات');
+assert.equal(made.questions.length, 6);
 
 console.log('game rules and question bank OK');
